@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PNG Замовлення на Друк</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--tg-theme-bg-color, #fff);
+      color: var(--tg-theme-text-color, #000);
+      padding: 16px;
+      padding-bottom: 100px;
+    }
+
+    h1 {
+      font-size: 20px;
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    .order-item {
+      background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    .order-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .remove-item {
+      background: none;
+      border: none;
+      color: #ff3b30;
+      font-size: 22px;
+      cursor: pointer;
+      padding: 0 4px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      color: var(--tg-theme-hint-color, #999);
+      margin-bottom: 4px;
+      margin-top: 10px;
+    }
+
+    select, input, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--tg-theme-hint-color, #ccc);
+      border-radius: 8px;
+      font-size: 15px;
+      background: var(--tg-theme-bg-color, #fff);
+      color: var(--tg-theme-text-color, #000);
+      -webkit-appearance: none;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .sizes-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .size-btn {
+      padding: 8px 14px;
+      border: 1px solid var(--tg-theme-hint-color, #ccc);
+      border-radius: 8px;
+      background: var(--tg-theme-bg-color, #fff);
+      color: var(--tg-theme-text-color, #000);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .size-btn.active {
+      background: var(--tg-theme-button-color, #007aff);
+      color: var(--tg-theme-button-text-color, #fff);
+      border-color: var(--tg-theme-button-color, #007aff);
+    }
+
+    .add-item-btn {
+      width: 100%;
+      padding: 12px;
+      border: 2px dashed var(--tg-theme-hint-color, #ccc);
+      border-radius: 12px;
+      background: none;
+      color: var(--tg-theme-link-color, #007aff);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--tg-theme-hint-color, #999);
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+
+    .delivery-section {
+      background: var(--tg-theme-secondary-bg-color, #f5f5f5);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .file-upload-area {
+      border: 2px dashed var(--tg-theme-hint-color, #ccc);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .file-upload-area:hover {
+      border-color: var(--tg-theme-link-color, #007aff);
+    }
+
+    .file-upload-area input[type="file"] {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .file-upload-area .icon {
+      font-size: 28px;
+      margin-bottom: 4px;
+    }
+
+    .file-upload-area .text {
+      font-size: 13px;
+      color: var(--tg-theme-hint-color, #999);
+    }
+
+    .file-list {
+      margin-top: 8px;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+      font-size: 13px;
+      border-bottom: 1px solid var(--tg-theme-hint-color, #eee);
+    }
+
+    .file-item .name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      margin-right: 8px;
+    }
+
+    .file-item .remove {
+      color: #ff3b30;
+      cursor: pointer;
+      font-size: 18px;
+      border: none;
+      background: none;
+    }
+
+    .preview-img {
+      width: 50px;
+      height: 50px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin-right: 8px;
+    }
+
+    .error {
+      border-color: #ff3b30 !important;
+    }
+
+    .error-text {
+      color: #ff3b30;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Замовлення на друк</h1>
+
+<div id="items-container"></div>
+
+<button class="add-item-btn" onclick="addItem()">+ Додати позицію</button>
+
+<div class="section-title">Файли / макети</div>
+<div class="delivery-section">
+  <div class="file-upload-area" id="fileUploadArea">
+    <div class="icon">📎</div>
+    <div class="text">Натисніть для вибору файлів<br>(фото, PDF, макети)</div>
+    <input type="file" id="fileInput" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg,.ai,.cdr,.eps">
+  </div>
+  <div class="file-list" id="fileList"></div>
+</div>
+
+<div class="section-title">Доставка</div>
+<div class="delivery-section">
+  <label>ПІБ отримувача *</label>
+  <input type="text" id="recipientName" placeholder="Шевченко Іван Петрович">
+
+  <label>Телефон *</label>
+  <input type="tel" id="recipientPhone" placeholder="0991234567">
+
+  <label>Нова Пошта (місто, відділення) *</label>
+  <textarea id="deliveryAddress" placeholder="м. Київ, відділення №25"></textarea>
+</div>
+
+<div class="section-title">Коментар</div>
+<div class="delivery-section">
+  <textarea id="orderComment" placeholder="Додаткові побажання..."></textarea>
+</div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
+
+const PRODUCT_TYPES = ['Футболка', 'Худі', 'Худі теплий', 'Лонгслів', 'Світшот'];
+const COLORS = ['Чорний', 'Хакі', 'Олива', 'Білий', 'Сірий'];
+const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+
+let items = [];
+let uploadedFiles = [];
+
+function addItem() {
+  const id = Date.now();
+  items.push({ id, type: '', color: '', size: '', qty: 1, customization: '' });
+  renderItems();
+}
+
+function removeItem(id) {
+  items = items.filter(i => i.id !== id);
+  renderItems();
+}
+
+function renderItems() {
+  const container = document.getElementById('items-container');
+  container.innerHTML = items.map((item, idx) => `
+    <div class="order-item" data-id="${item.id}">
+      <div class="order-item-header">
+        <span>Позиція ${idx + 1}</span>
+        ${items.length > 1 ? `<button class="remove-item" onclick="removeItem(${item.id})">×</button>` : ''}
+      </div>
+
+      <label>Тип виробу *</label>
+      <select onchange="updateItem(${item.id}, 'type', this.value)">
+        <option value="">Оберіть тип</option>
+        ${PRODUCT_TYPES.map(t => `<option value="${t}" ${item.type === t ? 'selected' : ''}>${t}</option>`).join('')}
+      </select>
+
+      <label>Колір *</label>
+      <select onchange="updateItem(${item.id}, 'color', this.value)">
+        <option value="">Оберіть колір</option>
+        ${COLORS.map(c => `<option value="${c}" ${item.color === c ? 'selected' : ''}>${c}</option>`).join('')}
+        <option value="__other" ${item.color && !COLORS.includes(item.color) ? 'selected' : ''}>Інший...</option>
+      </select>
+      ${item.color && !COLORS.includes(item.color) && item.color !== '__other' ? `
+        <input type="text" value="${item.color}" placeholder="Вкажіть колір"
+          oninput="updateItem(${item.id}, 'color', this.value)">
+      ` : ''}
+      ${item.color === '__other' ? `
+        <input type="text" placeholder="Вкажіть колір"
+          oninput="updateItem(${item.id}, 'color', this.value)" autofocus>
+      ` : ''}
+
+      <label>Розмір *</label>
+      <div class="sizes-row">
+        ${SIZES.map(s => `
+          <button class="size-btn ${item.size === s ? 'active' : ''}"
+            onclick="updateItem(${item.id}, 'size', '${s}')">${s}</button>
+        `).join('')}
+      </div>
+
+      <label>Кількість *</label>
+      <input type="number" min="1" value="${item.qty}"
+        onchange="updateItem(${item.id}, 'qty', parseInt(this.value) || 1)">
+
+      <label>Кастомізація (позивний, шеврони, розташування)</label>
+      <textarea placeholder="Логотип залишаємо, позивний СКІФ на правий рукав..."
+        oninput="updateItem(${item.id}, 'customization', this.value)">${item.customization}</textarea>
+    </div>
+  `).join('');
+}
+
+function updateItem(id, field, value) {
+  const item = items.find(i => i.id === id);
+  if (item) {
+    if (field === 'color' && value === '__other') {
+      item.color = '__other';
+      renderItems();
+      return;
+    }
+    item[field] = value;
+    if (field !== 'customization' && field !== 'qty') renderItems();
+  }
+}
+
+// File handling
+const fileInput = document.getElementById('fileInput');
+fileInput.addEventListener('change', (e) => {
+  for (const file of e.target.files) {
+    if (uploadedFiles.length >= 10) break;
+    uploadedFiles.push(file);
+  }
+  fileInput.value = '';
+  renderFiles();
+});
+
+function removeFile(idx) {
+  uploadedFiles.splice(idx, 1);
+  renderFiles();
+}
+
+function renderFiles() {
+  const list = document.getElementById('fileList');
+  if (uploadedFiles.length === 0) {
+    list.innerHTML = '';
+    return;
+  }
+  list.innerHTML = uploadedFiles.map((f, idx) => {
+    const isImage = f.type.startsWith('image/');
+    const preview = isImage ? `<img class="preview-img" src="${URL.createObjectURL(f)}">` : '';
+    return `
+      <div class="file-item">
+        ${preview}
+        <span class="name">${f.name} (${(f.size / 1024).toFixed(0)} KB)</span>
+        <button class="remove" onclick="removeFile(${idx})">×</button>
+      </div>
+    `;
+  }).join('');
+}
+
+// Validation & submit
+function validate() {
+  let valid = true;
+
+  for (const item of items) {
+    if (!item.type || !item.color || item.color === '__other' || !item.size) {
+      valid = false;
+      break;
+    }
+  }
+
+  const name = document.getElementById('recipientName').value.trim();
+  const phone = document.getElementById('recipientPhone').value.trim();
+  const address = document.getElementById('deliveryAddress').value.trim();
+
+  if (!name || !phone || !address) valid = false;
+  if (uploadedFiles.length === 0) valid = false;
+
+  return valid;
+}
+
+function getFormData() {
+  const formData = new FormData();
+
+  const orderData = {
+    items: items.map(i => ({
+      type: i.type,
+      color: i.color,
+      size: i.size,
+      qty: i.qty,
+      customization: i.customization
+    })),
+    delivery: {
+      name: document.getElementById('recipientName').value.trim(),
+      phone: document.getElementById('recipientPhone').value.trim(),
+      address: document.getElementById('deliveryAddress').value.trim()
+    },
+    comment: document.getElementById('orderComment').value.trim(),
+    telegram_user: tg.initDataUnsafe?.user?.first_name || '',
+    telegram_user_id: tg.initDataUnsafe?.user?.id || '',
+    submitted_at: new Date().toISOString()
+  };
+
+  formData.append('order', JSON.stringify(orderData));
+  uploadedFiles.forEach((f, i) => formData.append(`file_${i}`, f));
+
+  return formData;
+}
+
+// Main button
+tg.MainButton.setText('Відправити замовлення');
+tg.MainButton.show();
+
+tg.MainButton.onClick(async () => {
+  if (!validate()) {
+    tg.showAlert('Заповніть всі обов\'язкові поля (*) та прикріпіть файли');
+    return;
+  }
+
+  tg.MainButton.showProgress();
+  tg.MainButton.disable();
+
+  try {
+    const formData = getFormData();
+    const WEBHOOK_URL = 'WEBHOOK_URL_PLACEHOLDER';
+
+    const res = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!res.ok) throw new Error('Server error');
+
+    tg.showAlert('Замовлення відправлено!');
+    setTimeout(() => tg.close(), 1500);
+  } catch (err) {
+    tg.showAlert('Помилка відправки. Спробуйте ще раз.');
+    tg.MainButton.hideProgress();
+    tg.MainButton.enable();
+  }
+});
+
+// Init with one item
+addItem();
+</script>
+
+</body>
+</html>
