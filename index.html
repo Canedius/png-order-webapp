@@ -231,13 +231,17 @@
       color: var(--text-dim); opacity: 0.5;
     }
 
-    .colors-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .colors-row {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
 
     .color-btn {
       display: flex;
       align-items: center;
-      gap: 6px;
-      padding: 7px 12px;
+      gap: 8px;
+      padding: 9px 12px;
       border: 1px solid var(--metal-edge);
       border-radius: 4px;
       background: var(--metal-light);
@@ -263,6 +267,8 @@
       border: 1px solid rgba(255,255,255,0.15);
       flex-shrink: 0;
     }
+
+    .colors-row.single { grid-template-columns: 1fr; max-width: 50%; }
 
     .sizes-row { display: flex; gap: 6px; flex-wrap: wrap; }
 
@@ -363,7 +369,7 @@
       transition: max-height 0.35s ease, opacity 0.3s ease;
     }
     .color-block.visible {
-      max-height: 200px;
+      max-height: 600px;
       opacity: 1;
     }
 
@@ -478,7 +484,7 @@ function renderItems() {
 
       <div class="color-block ${item.type ? 'visible' : ''}">
         <label>Колір *</label>
-        <div class="colors-row">
+        <div class="colors-row ${(COLORS_BY_TYPE[item.type] || []).length <= 1 ? 'single' : ''}">
           ${(COLORS_BY_TYPE[item.type] || []).map(c => `
             <button class="color-btn ${item.color === c ? 'active' : ''}"
               onclick="updateItem(${item.id}, 'color', '${c}')">
@@ -489,21 +495,23 @@ function renderItems() {
         </div>
       </div>
 
-      <label>Розмір *</label>
-      <div class="sizes-row">
-        ${(SIZES_BY_TYPE[item.type] || SIZES_BY_TYPE['Футболка']).map(s => `
-          <button class="size-btn ${item.size === s ? 'active' : ''}"
-            onclick="updateItem(${item.id}, 'size', '${s}')">${s}</button>
-        `).join('')}
+      <div class="color-block ${item.type ? 'visible' : ''}">
+        <label>Розмір *</label>
+        <div class="sizes-row">
+          ${(SIZES_BY_TYPE[item.type] || SIZES_BY_TYPE['Футболка']).map(s => `
+            <button class="size-btn ${item.size === s ? 'active' : ''}"
+              onclick="updateItem(${item.id}, 'size', '${s}')">${s}</button>
+          `).join('')}
+        </div>
+
+        <label>Кількість *</label>
+        <input type="number" min="1" value="${item.qty}"
+          onchange="updateItem(${item.id}, 'qty', parseInt(this.value) || 1)">
+
+        <label>Коментар до товару</label>
+        <textarea placeholder="Позивний, шеврони, розташування..."
+          oninput="updateItem(${item.id}, 'customization', this.value)">${item.customization}</textarea>
       </div>
-
-      <label>Кількість *</label>
-      <input type="number" min="1" value="${item.qty}"
-        onchange="updateItem(${item.id}, 'qty', parseInt(this.value) || 1)">
-
-      <label>Коментар до товару</label>
-      <textarea placeholder="Позивний, шеврони, розташування..."
-        oninput="updateItem(${item.id}, 'customization', this.value)">${item.customization}</textarea>
     </div>
   `).join('');
 }
