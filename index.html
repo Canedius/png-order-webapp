@@ -232,9 +232,9 @@
     }
 
     .colors-row {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 5px;
     }
 
     .color-btn {
@@ -269,7 +269,7 @@
     }
 
 
-    .sizes-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+    .sizes-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
 
     .size-btn {
       padding: 8px 14px;
@@ -335,13 +335,6 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 4px 12px rgba(0,0,0,0.3);
     }
 
-    .color-size-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .color-size-row > div { min-width: 0; }
 
     .files-row {
       display: flex;
@@ -525,28 +518,23 @@ function renderItems() {
       </select>
 
       <div class="color-block ${item.type ? 'visible' : ''}">
-        <div class="color-size-row">
-          <div>
-            <label>Колір *</label>
-            <div class="colors-row ${(COLORS_BY_TYPE[item.type] || []).length <= 1 ? 'single' : ''}">
-              ${(COLORS_BY_TYPE[item.type] || []).map(c => `
-                <button class="color-btn ${item.color === c ? 'active' : ''}"
-                  onclick="updateItem(${item.id}, 'color', '${c}')">
-                  <span class="color-swatch" style="background:${COLOR_HEX[c]}"></span>
-                  <span class="color-name">${c}</span>
-                </button>
-              `).join('')}
-            </div>
-          </div>
-          <div>
-            <label>Розмір *</label>
-            <div class="sizes-row">
-              ${(SIZES_BY_TYPE[item.type] || SIZES_BY_TYPE['Футболка']).map(s => `
-                <button class="size-btn ${item.size === s ? 'active' : ''}"
-                  onclick="updateItem(${item.id}, 'size', '${s}')">${s}</button>
-              `).join('')}
-            </div>
-          </div>
+        <label>Колір *</label>
+        <div class="colors-row">
+          ${(COLORS_BY_TYPE[item.type] || []).map(c => `
+            <button class="color-btn ${item.color === c ? 'active' : ''}"
+              onclick="updateItem(${item.id}, 'color', '${c}')">
+              <span class="color-swatch" style="background:${COLOR_HEX[c]}"></span>
+              <span class="color-name">${c}</span>
+            </button>
+          `).join('')}
+        </div>
+
+        <label>Розмір *</label>
+        <div class="sizes-row">
+          ${(SIZES_BY_TYPE[item.type] || SIZES_BY_TYPE['Футболка']).map(s => `
+            <button class="size-btn ${item.size === s ? 'active' : ''}"
+              onclick="updateItem(${item.id}, 'size', '${s}')">${s}</button>
+          `).join('')}
         </div>
 
         <label>Кількість *</label>
