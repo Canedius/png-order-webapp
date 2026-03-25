@@ -336,6 +336,61 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 4px 12px rgba(0,0,0,0.3);
     }
 
+    .item-layout {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+    }
+
+    .item-left { min-width: 0; }
+
+    .item-right {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-top: 4px;
+    }
+
+    .file-box {
+      width: 80px;
+      height: 80px;
+      border: 2px dashed var(--metal-edge);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      background: rgba(196, 145, 62, 0.03);
+      transition: border-color 0.2s;
+    }
+
+    .file-box:hover { border-color: var(--accent); }
+
+    .file-box.has-files { border-color: var(--accent); background: rgba(196, 145, 62, 0.08); }
+
+    .file-box input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    }
+
+    .file-box .icon { font-size: 22px; line-height: 1; }
+    .file-box .text {
+      font-size: 8px;
+      color: var(--text-dim);
+      text-align: center;
+      line-height: 1.2;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .file-box .count {
+      font-size: 10px;
+      color: var(--accent);
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
     .file-upload-area {
       border: 2px dashed var(--metal-edge);
       border-radius: 6px;
@@ -389,16 +444,6 @@
   <h1>Замовлення на друк</h1>
 
   <div id="items-container"></div>
-
-  <div class="section-title">Файли / макети</div>
-  <div class="delivery-section">
-    <div class="file-upload-area" id="fileUploadArea">
-      <div class="icon">📎</div>
-      <div class="text">Натисніть для вибору файлів<br>(фото, PDF, макети)</div>
-      <input type="file" id="fileInput" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg,.ai,.cdr,.eps">
-    </div>
-    <div class="file-list" id="fileList"></div>
-  </div>
 
   <button class="add-item-btn" onclick="addItem()">+ ДОДАТИ ПОЗИЦІЮ</button>
 
@@ -454,11 +499,10 @@ const SIZES_BY_TYPE = {
 };
 
 let items = [];
-let uploadedFiles = [];
 
 function addItem() {
   const id = Date.now();
-  items.push({ id, type: '', color: 'Чорний', size: '', qty: 1, customization: '' });
+  items.push({ id, type: '', color: 'Чорний', size: '', qty: 1, customization: '', vizFiles: [], printFiles: [] });
   renderItems();
 }
 
@@ -476,41 +520,62 @@ function renderItems() {
         ${items.length > 1 ? `<button class="remove-item" onclick="removeItem(${item.id})">DEL</button>` : ''}
       </div>
 
-      <label>Тип виробу *</label>
-      <select onchange="updateItem(${item.id}, 'type', this.value)">
-        <option value="">-- оберіть тип --</option>
-        ${PRODUCT_TYPES.map(t => `<option value="${t}" ${item.type === t ? 'selected' : ''}>${t}</option>`).join('')}
-      </select>
+      <div class="item-layout">
+        <div class="item-left">
+          <label>Тип виробу *</label>
+          <select onchange="updateItem(${item.id}, 'type', this.value)">
+            <option value="">-- оберіть тип --</option>
+            ${PRODUCT_TYPES.map(t => `<option value="${t}" ${item.type === t ? 'selected' : ''}>${t}</option>`).join('')}
+          </select>
 
-      <div class="color-block ${item.type ? 'visible' : ''}">
-        <label>Колір *</label>
-        <div class="colors-row ${(COLORS_BY_TYPE[item.type] || []).length <= 1 ? 'single' : ''}">
-          ${(COLORS_BY_TYPE[item.type] || []).map(c => `
-            <button class="color-btn ${item.color === c ? 'active' : ''}"
-              onclick="updateItem(${item.id}, 'color', '${c}')">
-              <span class="color-swatch" style="background:${COLOR_HEX[c]}"></span>
-              <span class="color-name">${c}</span>
-            </button>
-          `).join('')}
+          <div class="color-block ${item.type ? 'visible' : ''}">
+            <label>Колір *</label>
+            <div class="colors-row ${(COLORS_BY_TYPE[item.type] || []).length <= 1 ? 'single' : ''}">
+              ${(COLORS_BY_TYPE[item.type] || []).map(c => `
+                <button class="color-btn ${item.color === c ? 'active' : ''}"
+                  onclick="updateItem(${item.id}, 'color', '${c}')">
+                  <span class="color-swatch" style="background:${COLOR_HEX[c]}"></span>
+                  <span class="color-name">${c}</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="color-block ${item.type ? 'visible' : ''}">
+            <label>Розмір *</label>
+            <div class="sizes-row">
+              ${(SIZES_BY_TYPE[item.type] || SIZES_BY_TYPE['Футболка']).map(s => `
+                <button class="size-btn ${item.size === s ? 'active' : ''}"
+                  onclick="updateItem(${item.id}, 'size', '${s}')">${s}</button>
+              `).join('')}
+            </div>
+
+            <label>Кількість *</label>
+            <input type="number" min="1" value="${item.qty}"
+              onchange="updateItem(${item.id}, 'qty', parseInt(this.value) || 1)">
+
+            <label>Коментар до товару</label>
+            <textarea placeholder="Позивний, шеврони, розташування..."
+              oninput="updateItem(${item.id}, 'customization', this.value)">${item.customization}</textarea>
+          </div>
         </div>
-      </div>
 
-      <div class="color-block ${item.type ? 'visible' : ''}">
-        <label>Розмір *</label>
-        <div class="sizes-row">
-          ${(SIZES_BY_TYPE[item.type] || SIZES_BY_TYPE['Футболка']).map(s => `
-            <button class="size-btn ${item.size === s ? 'active' : ''}"
-              onclick="updateItem(${item.id}, 'size', '${s}')">${s}</button>
-          `).join('')}
+        <div class="item-right">
+          <div class="file-box ${(item.vizFiles || []).length ? 'has-files' : ''}" onclick="this.querySelector('input').click()">
+            <div class="icon">🖼</div>
+            <div class="text">Візуалі-<br>зація</div>
+            ${(item.vizFiles || []).length ? `<div class="count">${(item.vizFiles || []).length}</div>` : ''}
+            <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg"
+              onchange="addFiles(${item.id}, 'vizFiles', this)" onclick="event.stopPropagation()">
+          </div>
+          <div class="file-box ${(item.printFiles || []).length ? 'has-files' : ''}" onclick="this.querySelector('input').click()">
+            <div class="icon">🖨</div>
+            <div class="text">Файли<br>для друку</div>
+            ${(item.printFiles || []).length ? `<div class="count">${(item.printFiles || []).length}</div>` : ''}
+            <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg,.ai,.cdr,.eps,.psd"
+              onchange="addFiles(${item.id}, 'printFiles', this)" onclick="event.stopPropagation()">
+          </div>
         </div>
-
-        <label>Кількість *</label>
-        <input type="number" min="1" value="${item.qty}"
-          onchange="updateItem(${item.id}, 'qty', parseInt(this.value) || 1)">
-
-        <label>Коментар до товару</label>
-        <textarea placeholder="Позивний, шеврони, розташування..."
-          oninput="updateItem(${item.id}, 'customization', this.value)">${item.customization}</textarea>
       </div>
     </div>
   `).join('');
@@ -530,35 +595,15 @@ function updateItem(id, field, value) {
   }
 }
 
-const fileInput = document.getElementById('fileInput');
-fileInput.addEventListener('change', (e) => {
-  for (const file of e.target.files) {
-    if (uploadedFiles.length >= 10) break;
-    uploadedFiles.push(file);
+function addFiles(itemId, field, input) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  for (const file of input.files) {
+    if (item[field].length >= 5) break;
+    item[field].push(file);
   }
-  fileInput.value = '';
-  renderFiles();
-});
-
-function removeFile(idx) {
-  uploadedFiles.splice(idx, 1);
-  renderFiles();
-}
-
-function renderFiles() {
-  const list = document.getElementById('fileList');
-  if (uploadedFiles.length === 0) { list.innerHTML = ''; return; }
-  list.innerHTML = uploadedFiles.map((f, idx) => {
-    const isImage = f.type.startsWith('image/');
-    const preview = isImage ? `<img class="preview-img" src="${URL.createObjectURL(f)}">` : '';
-    return `
-      <div class="file-item">
-        ${preview}
-        <span class="name">${f.name} (${(f.size / 1024).toFixed(0)} KB)</span>
-        <button class="remove" onclick="removeFile(${idx})">×</button>
-      </div>
-    `;
-  }).join('');
+  input.value = '';
+  renderItems();
 }
 
 function validate() {
@@ -570,7 +615,6 @@ function validate() {
   const phone = document.getElementById('recipientPhone').value.trim();
   const address = document.getElementById('deliveryAddress').value.trim();
   if (!name || !phone || !address) valid = false;
-  if (uploadedFiles.length === 0) valid = false;
   return valid;
 }
 
@@ -591,7 +635,10 @@ function getFormData() {
     submitted_at: new Date().toISOString()
   };
   formData.append('order', JSON.stringify(orderData));
-  uploadedFiles.forEach((f, i) => formData.append(`file_${i}`, f));
+  items.forEach((item, idx) => {
+    (item.vizFiles || []).forEach((f, i) => formData.append(`item${idx}_viz_${i}`, f));
+    (item.printFiles || []).forEach((f, i) => formData.append(`item${idx}_print_${i}`, f));
+  });
   return formData;
 }
 
