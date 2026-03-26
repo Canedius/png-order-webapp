@@ -1236,7 +1236,7 @@ async function submitOrder() {
   try {
     if (isTg) {
       const formData = getFormData();
-      const WEBHOOK_URL = 'WEBHOOK_URL_PLACEHOLDER';
+      const WEBHOOK_URL = 'https://primary-production-eeb3.up.railway.app/webhook-test/png-order';
       const res = await fetch(WEBHOOK_URL, { method: 'POST', body: formData });
       if (!res.ok) throw new Error('Server error');
       tg.MainButton.hideProgress(); tg.MainButton.hide();
