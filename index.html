@@ -1233,29 +1233,22 @@ if (isTg) {
 async function submitOrder() {
   if (isTg && !validate()) return;
   if (isTg) { tg.MainButton.showProgress(); tg.MainButton.disable(); }
-  try {
-    if (isTg) {
-      const formData = getFormData();
-      const WEBHOOK_URL = 'https://primary-production-eeb3.up.railway.app/webhook-test/png-order';
-      const res = await fetch(WEBHOOK_URL, { method: 'POST', body: formData });
-      if (!res.ok) throw new Error('Server error');
-      tg.MainButton.hideProgress(); tg.MainButton.hide();
-    } else {
-      document.getElementById('fallbackSubmit').style.display = 'none';
-    }
-    showShutter();
-  } catch (err) {
-    const msg = 'Помилка відправки. Спробуйте ще раз.';
-    if (isTg) { tg.showAlert(msg); tg.MainButton.hideProgress(); tg.MainButton.enable(); }
-    else { alert(msg); }
+  if (isTg) {
+    const formData = getFormData();
+    const WEBHOOK_URL = 'https://primary-production-eeb3.up.railway.app/webhook-test/png-order';
+    fetch(WEBHOOK_URL, { method: 'POST', body: formData });
+    tg.MainButton.hideProgress(); tg.MainButton.hide();
+  } else {
+    document.getElementById('fallbackSubmit').style.display = 'none';
   }
+  showShutter();
 }
 
 if (isTg) tg.MainButton.onClick(submitOrder);
 
 function showShutter() {
   document.getElementById('shutter').classList.add('active');
-  if (isTg) setTimeout(() => tg.close(), 3000);
+  // webapp залишається відкритим після відправки
 }
 
 function resetForm() {
