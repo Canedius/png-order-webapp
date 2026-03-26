@@ -429,6 +429,43 @@
       opacity: 1;
     }
 
+    .autocomplete-wrap { position: relative; }
+    .autocomplete-wrap input { padding-right: 36px; }
+    .autocomplete-wrap .ac-clear {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--text-dim); font-size: 18px;
+      cursor: pointer; display: none; line-height: 1;
+    }
+    .autocomplete-wrap .ac-clear.visible { display: block; }
+    .ac-dropdown {
+      position: absolute; left: 0; right: 0; top: 100%;
+      background: var(--metal-light); border: 1px solid var(--metal-edge);
+      border-top: none; border-radius: 0 0 4px 4px;
+      max-height: 200px; overflow-y: auto; z-index: 10;
+      display: none;
+    }
+    .ac-dropdown.open { display: block; }
+    .ac-dropdown .ac-option {
+      padding: 10px 12px; font-size: 14px; cursor: pointer;
+      font-family: 'Roboto Condensed', sans-serif; color: var(--text);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .ac-dropdown .ac-option:hover, .ac-dropdown .ac-option.active {
+      background: rgba(196, 145, 62, 0.15); color: var(--text-bright);
+    }
+    .ac-spinner {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      width: 16px; height: 16px; border: 2px solid var(--metal-edge);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: ac-spin 0.6s linear infinite; display: none;
+    }
+    .ac-spinner.visible { display: block; }
+    @keyframes ac-spin { to { transform: translateY(-50%) rotate(360deg); } }
+    .selected-value {
+      font-size: 12px; color: var(--accent); margin-top: 4px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
     .error { border-color: var(--danger) !important; }
     .error-text { color: var(--danger); font-size: 12px; margin-top: 2px; }
   </style>
@@ -456,8 +493,23 @@
     <label>Телефон *</label>
     <input type="tel" id="recipientPhone" placeholder="0991234567">
 
-    <label>Нова Пошта (місто, відділення) *</label>
-    <textarea id="deliveryAddress" placeholder="м. Київ, відділення №25"></textarea>
+    <label>Місто *</label>
+    <div class="autocomplete-wrap" id="cityWrap">
+      <input type="text" id="cityInput" placeholder="Почніть вводити назву міста..." autocomplete="off">
+      <div class="ac-spinner" id="citySpinner"></div>
+      <button class="ac-clear" id="cityClear" onclick="clearCity()">&times;</button>
+      <div class="ac-dropdown" id="cityDropdown"></div>
+    </div>
+    <div class="selected-value" id="citySelected"></div>
+
+    <label>Відділення / Поштомат *</label>
+    <div class="autocomplete-wrap" id="whWrap">
+      <input type="text" id="whInput" placeholder="Оберіть спочатку місто" autocomplete="off" disabled>
+      <div class="ac-spinner" id="whSpinner"></div>
+      <button class="ac-clear" id="whClear" onclick="clearWarehouse()">&times;</button>
+      <div class="ac-dropdown" id="whDropdown"></div>
+    </div>
+    <div class="selected-value" id="whSelected"></div>
   </div>
 
   <div class="section-title">Коментар</div>
@@ -470,6 +522,149 @@
 const tg = window.Telegram.WebApp;
 tg.ready();
 tg.expand();
+
+// ── Nova Poshta API ──
+const NP_API = 'https://api.novaposhta.ua/v2.0/json/';
+const NP_KEY = 'a88887f1567a0a6c8501efa6cf948cc0';
+let selectedCity = null;   // { ref, name, area }
+let selectedWarehouse = null; // { ref, description, number }
+
+function debounce(fn, ms) {
+  let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
+}
+
+async function npCall(model, method, props) {
+  const res = await fetch(NP_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ apiKey: NP_KEY, modelName: model, calledMethod: method, methodProperties: props })
+  });
+  const json = await res.json();
+  return json.data || [];
+}
+
+// ── City search ──
+const cityInput = document.getElementById('cityInput');
+const cityDropdown = document.getElementById('cityDropdown');
+const citySpinner = document.getElementById('citySpinner');
+const cityClear = document.getElementById('cityClear');
+const citySelectedEl = document.getElementById('citySelected');
+
+const searchCity = debounce(async (q) => {
+  if (q.length < 2) { cityDropdown.classList.remove('open'); return; }
+  citySpinner.classList.add('visible');
+  try {
+    const data = await npCall('Address', 'searchSettlements', { CityName: q, Limit: 10 });
+    const addresses = data[0]?.Addresses || [];
+    if (!addresses.length) {
+      cityDropdown.innerHTML = '<div class="ac-option">Нічого не знайдено</div>';
+    } else {
+      cityDropdown.innerHTML = addresses.map(a =>
+        `<div class="ac-option" data-ref="${a.DeliveryCity}" data-name="${a.Present}" data-area="${a.Area}">${a.Present}</div>`
+      ).join('');
+    }
+    cityDropdown.classList.add('open');
+  } finally { citySpinner.classList.remove('visible'); }
+}, 350);
+
+cityInput.addEventListener('input', (e) => {
+  selectedCity = null;
+  citySelectedEl.textContent = '';
+  cityClear.classList.toggle('visible', !!e.target.value);
+  clearWarehouse();
+  document.getElementById('whInput').disabled = true;
+  document.getElementById('whInput').placeholder = 'Оберіть спочатку місто';
+  searchCity(e.target.value.trim());
+});
+
+cityDropdown.addEventListener('click', (e) => {
+  const opt = e.target.closest('.ac-option');
+  if (!opt || !opt.dataset.ref) return;
+  selectedCity = { ref: opt.dataset.ref, name: opt.dataset.name, area: opt.dataset.area };
+  cityInput.value = opt.dataset.name;
+  citySelectedEl.textContent = '';
+  cityDropdown.classList.remove('open');
+  cityClear.classList.add('visible');
+  // unlock warehouse
+  const whInput = document.getElementById('whInput');
+  whInput.disabled = false;
+  whInput.placeholder = 'Почніть вводити номер або назву...';
+  whInput.focus();
+});
+
+function clearCity() {
+  cityInput.value = '';
+  selectedCity = null;
+  citySelectedEl.textContent = '';
+  cityClear.classList.remove('visible');
+  cityDropdown.classList.remove('open');
+  clearWarehouse();
+  document.getElementById('whInput').disabled = true;
+  document.getElementById('whInput').placeholder = 'Оберіть спочатку місто';
+  cityInput.focus();
+}
+
+// ── Warehouse search ──
+const whInput = document.getElementById('whInput');
+const whDropdown = document.getElementById('whDropdown');
+const whSpinner = document.getElementById('whSpinner');
+const whClear = document.getElementById('whClear');
+const whSelectedEl = document.getElementById('whSelected');
+
+const searchWh = debounce(async (q) => {
+  if (!selectedCity) return;
+  whSpinner.classList.add('visible');
+  try {
+    const props = { CityRef: selectedCity.ref, Limit: 20 };
+    if (q) props.FindByString = q;
+    const data = await npCall('Address', 'getWarehouses', props);
+    if (!data.length) {
+      whDropdown.innerHTML = '<div class="ac-option">Нічого не знайдено</div>';
+    } else {
+      whDropdown.innerHTML = data.map(w =>
+        `<div class="ac-option" data-ref="${w.Ref}" data-desc="${w.Description}" data-num="${w.Number}">${w.Description}</div>`
+      ).join('');
+    }
+    whDropdown.classList.add('open');
+  } finally { whSpinner.classList.remove('visible'); }
+}, 350);
+
+whInput.addEventListener('input', (e) => {
+  selectedWarehouse = null;
+  whSelectedEl.textContent = '';
+  whClear.classList.toggle('visible', !!e.target.value);
+  searchWh(e.target.value.trim());
+});
+
+whInput.addEventListener('focus', () => {
+  if (selectedCity && !selectedWarehouse && !whDropdown.children.length) {
+    searchWh('');
+  }
+});
+
+whDropdown.addEventListener('click', (e) => {
+  const opt = e.target.closest('.ac-option');
+  if (!opt || !opt.dataset.ref) return;
+  selectedWarehouse = { ref: opt.dataset.ref, description: opt.dataset.desc, number: opt.dataset.num };
+  whInput.value = opt.dataset.desc;
+  whSelectedEl.textContent = '';
+  whDropdown.classList.remove('open');
+  whClear.classList.add('visible');
+});
+
+function clearWarehouse() {
+  whInput.value = '';
+  selectedWarehouse = null;
+  whSelectedEl.textContent = '';
+  whClear.classList.remove('visible');
+  whDropdown.classList.remove('open');
+}
+
+// close dropdowns on outside click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#cityWrap')) cityDropdown.classList.remove('open');
+  if (!e.target.closest('#whWrap')) whDropdown.classList.remove('open');
+});
 
 tg.MainButton.setParams({
   color: '#c4913e',
@@ -498,6 +693,20 @@ const SIZES_BY_TYPE = {
   'Худі легкий': ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
   'Худі теплий': ['XS', 'S', 'M', 'L', 'XL', 'XXL']
 };
+
+const SKU_PREFIX = {
+  'Футболка': 'KUF006',
+  'Худі теплий': 'KUF001',
+  'Худі легкий': 'KUF002'
+};
+const COLOR_CODE = {
+  'Чорний': 'BK', 'Білий': 'WH', 'Рожевий': 'PK', 'Бежевий': 'NU',
+  'Койот': 'KT', 'Олива': 'OG', 'Сірий': 'GB', 'Сірий грі': 'GF', 'Хакі': 'KH'
+};
+
+function buildSku(type, color, size) {
+  return (SKU_PREFIX[type] || '') + (COLOR_CODE[color] || '') + size;
+}
 
 let items = [];
 
@@ -612,27 +821,46 @@ function validate() {
   }
   const name = document.getElementById('recipientName').value.trim();
   const phone = document.getElementById('recipientPhone').value.trim();
-  const address = document.getElementById('deliveryAddress').value.trim();
-  if (!name || !phone || !address) valid = false;
+  if (!name || !phone || !selectedCity || !selectedWarehouse) valid = false;
   return valid;
 }
 
 function getFormData() {
   const formData = new FormData();
+  const fullName = document.getElementById('recipientName').value.trim();
+  const phone = document.getElementById('recipientPhone').value.trim();
+  const comment = document.getElementById('orderComment').value.trim();
+
   const orderData = {
-    items: items.map(i => ({
-      type: i.type, color: i.color, size: i.size, qty: i.qty, customization: i.customization
-    })),
-    delivery: {
-      name: document.getElementById('recipientName').value.trim(),
-      phone: document.getElementById('recipientPhone').value.trim(),
-      address: document.getElementById('deliveryAddress').value.trim()
+    source_id: 31,
+    manager_id: 37,
+    buyer: {
+      full_name: fullName,
+      phone: phone
     },
-    comment: document.getElementById('orderComment').value.trim(),
-    telegram_user: tg.initDataUnsafe?.user?.first_name || '',
-    telegram_user_id: tg.initDataUnsafe?.user?.id || '',
-    submitted_at: new Date().toISOString()
+    shipping: {
+      delivery_service_id: 1,
+      shipping_service: 'Нова Пошта',
+      shipping_address_city: selectedCity ? selectedCity.name : '',
+      shipping_address_country: 'Ukraine',
+      shipping_address_region: selectedCity ? selectedCity.area : '',
+      shipping_receive_point: selectedWarehouse ? selectedWarehouse.description : '',
+      recipient_full_name: fullName,
+      recipient_phone: phone,
+      warehouse_ref: selectedWarehouse ? selectedWarehouse.ref : ''
+    },
+    products: items.map(i => ({
+      sku: buildSku(i.type, i.color, i.size),
+      quantity: i.qty,
+      comment: i.customization || ''
+    })),
+    custom_fields: [
+      { uuid: 'OR_1010', value: 'DTF' }
+    ],
+    buyer_comment: comment,
+    ordered_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
   };
+
   formData.append('order', JSON.stringify(orderData));
   items.forEach((item, idx) => {
     (item.vizFiles || []).forEach((f, i) => formData.append(`item${idx}_viz_${i}`, f));
