@@ -5,6 +5,16 @@ const WEBAPP_URL = 'https://canedius.github.io/png-order-webapp/';
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 
+bot.on('polling_error', (error) => {
+  if (error.message && error.message.includes('409')) {
+    console.log('409 conflict — зупиняю polling на 30с...');
+    bot.stopPolling();
+    setTimeout(() => bot.startPolling(), 30000);
+  } else {
+    console.error('polling_error:', error.message);
+  }
+});
+
 // /start — показує кнопку WebApp
 bot.onText(/\/start/, (msg) => {
   bot.sendMessage(msg.chat.id, 'Натисніть кнопку нижче, щоб створити замовлення:', {
