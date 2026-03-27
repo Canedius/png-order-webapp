@@ -1103,7 +1103,7 @@ function makeThumb(file) {
 function getThumbsHtml(files, itemId, field) {
   if (!files || !files.length) return '';
   const n = Math.min(files.length, 5);
-  const thumbItems = files.slice(0, 5).map((file, idx) => {
+  const thumbItems = files.map((file, idx) => {
     const removeBtn = `<button class="thumb-remove" onclick="event.stopPropagation();removeFile(${itemId},'${field}',${idx})" type="button">✕</button>`;
     if (file.type && file.type.startsWith('image/')) {
       const src = thumbCache.get(file) || '';
@@ -1238,11 +1238,7 @@ function renderFileBox(itemId, field) {
 async function addFiles(itemId, field, input) {
   const item = items.find(i => i.id === itemId);
   if (!item) return;
-  const newFiles = [];
-  for (const file of input.files) {
-    if (item[field].length + newFiles.length >= 5) break;
-    newFiles.push(file);
-  }
+  const newFiles = [...input.files];
   input.value = '';
   // Generate thumbnails first, then render once
   await Promise.all(newFiles.map(async file => {
@@ -1259,11 +1255,10 @@ document.addEventListener('paste', async (e) => {
   if (!files.length || !items.length) return;
   e.preventDefault();
   const item = items[items.length - 1];
-  const toAdd = files.filter(() => item.vizFiles.length < 5);
-  await Promise.all(toAdd.map(async file => {
+  await Promise.all(files.map(async file => {
     const thumb = await makeThumb(file);
     if (thumb) thumbCache.set(file, thumb);
-    if (item.vizFiles.length < 5) item.vizFiles.push(file);
+    item.vizFiles.push(file);
   }));
   renderFileBox(item.id, 'vizFiles');
 });
@@ -1331,10 +1326,10 @@ function getFormData() {
     ],
     buyer_comment: comment,
     ordered_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
-    urgent: document.getElementById('urgentCheck').checked
   };
 
   formData.append('order', JSON.stringify(orderData));
+  formData.append('urgent', document.getElementById('urgentCheck').checked ? 'true' : 'false');
   items.forEach((item, idx) => {
     (item.vizFiles || []).forEach((f, i) => formData.append(`item${idx}_viz_${i}`, f));
     (item.printFiles || []).forEach((f, i) => formData.append(`item${idx}_print_${i}`, f));
