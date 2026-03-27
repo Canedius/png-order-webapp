@@ -1207,7 +1207,7 @@ async function addFiles(itemId, field, input) {
 }
 
 // ── Paste from clipboard → vizFiles останньої позиції ──
-document.addEventListener('paste', (e) => {
+document.addEventListener('paste', async (e) => {
   const files = [...(e.clipboardData?.files || [])];
   if (!files.length || !items.length) return;
   e.preventDefault();
