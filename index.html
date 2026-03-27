@@ -1124,6 +1124,24 @@ function updateItem(id, field, value) {
   }
 }
 
+function renderFileBox(itemId, field) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  const itemEl = document.querySelector(`#items-container [data-id="${itemId}"]`);
+  if (!itemEl) return;
+  const boxes = itemEl.querySelectorAll('.file-box');
+  const box = boxes[field === 'vizFiles' ? 0 : 1];
+  if (!box) return;
+  const inputEl = box.querySelector('input[type="file"]');
+  const files = item[field] || [];
+  const hasFiles = files.length > 0;
+  box.className = 'file-box' + (hasFiles ? ' has-files' : '');
+  box.innerHTML = hasFiles
+    ? `${getThumbsHtml(files)}<div class="overlay-label">${field === 'vizFiles' ? 'Візуалізація' : 'Для друку'}</div>`
+    : `<div class="icon">${field === 'vizFiles' ? '🖼' : '🖨'}</div><div class="text">${field === 'vizFiles' ? 'Візуалі-<br>зація' : 'Файли<br>для друку'}</div>`;
+  box.appendChild(inputEl);
+}
+
 function addFiles(itemId, field, input) {
   const item = items.find(i => i.id === itemId);
   if (!item) return;
@@ -1132,7 +1150,7 @@ function addFiles(itemId, field, input) {
     item[field].push(file);
   }
   input.value = '';
-  renderItems();
+  renderFileBox(itemId, field);
 }
 
 // ── Paste from clipboard → vizFiles останньої позиції ──
@@ -1145,7 +1163,7 @@ document.addEventListener('paste', (e) => {
     if (item.vizFiles.length >= 5) break;
     item.vizFiles.push(file);
   }
-  renderItems();
+  renderFileBox(item.id, 'vizFiles');
 });
 
 function validate() {
@@ -1235,7 +1253,7 @@ async function submitOrder() {
   if (isTg) { tg.MainButton.showProgress(); tg.MainButton.disable(); }
   if (isTg) {
     const formData = getFormData();
-    const WEBHOOK_URL = 'https://primary-production-eeb3.up.railway.app/webhook-test/png-order';
+    const WEBHOOK_URL = 'https://primary-production-eeb3.up.railway.app/webhook/png-order';
     fetch(WEBHOOK_URL, { method: 'POST', body: formData });
     tg.MainButton.hideProgress(); tg.MainButton.hide();
   } else {
@@ -1263,7 +1281,8 @@ function resetForm() {
     clearCity();
     clearWarehouse();
     document.getElementById('orderComment').value = '';
-    if (!isTg) document.getElementById('fallbackSubmit').style.display = 'block';
+    if (isTg) tg.MainButton.show();
+    else document.getElementById('fallbackSubmit').style.display = 'block';
     window.scrollTo(0, 0);
   }, 400);
 }
