@@ -541,6 +541,48 @@
       display: none;
     }
 
+    .urgent-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      margin: 8px 0 0;
+      background: var(--metal);
+      border: 1px solid var(--metal-edge);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .urgent-row input[type="checkbox"] { display: none; }
+    .urgent-check {
+      width: 22px; height: 22px;
+      border: 2px solid var(--metal-edge);
+      border-radius: 4px;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .urgent-check::after {
+      content: '✓';
+      font-size: 14px;
+      color: #1e1e1c;
+      display: none;
+    }
+    .urgent-row.active .urgent-check {
+      background: var(--danger);
+      border-color: var(--danger);
+    }
+    .urgent-row.active .urgent-check::after { display: block; }
+    .urgent-label {
+      font-family: 'Russo One', sans-serif;
+      font-size: 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text);
+      transition: color 0.15s;
+    }
+    .urgent-row.active .urgent-label { color: var(--danger); }
+
     /* ── Bunker shutter ── */
     .shutter {
       position: fixed;
@@ -807,6 +849,11 @@
   <div class="section-title">Коментар</div>
   <div class="delivery-section">
     <textarea id="orderComment" placeholder="Додаткові побажання..."></textarea>
+    <label class="urgent-row" id="urgentRow" onclick="toggleUrgent()">
+      <input type="checkbox" id="urgentCheck">
+      <div class="urgent-check"></div>
+      <span class="urgent-label">Терміново</span>
+    </label>
   </div>
 </div>
 
@@ -1283,7 +1330,8 @@ function getFormData() {
       { uuid: 'OR_1010', value: 'DTF' }
     ],
     buyer_comment: comment,
-    ordered_at: new Date().toISOString().replace('T', ' ').substring(0, 19)
+    ordered_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
+    urgent: document.getElementById('urgentCheck').checked
   };
 
   formData.append('order', JSON.stringify(orderData));
@@ -1336,10 +1384,19 @@ function resetForm() {
     clearCity();
     clearWarehouse();
     document.getElementById('orderComment').value = '';
+    document.getElementById('urgentCheck').checked = false;
+    document.getElementById('urgentRow').classList.remove('active');
     if (isTg) tg.MainButton.show();
     else document.getElementById('fallbackSubmit').style.display = 'block';
     window.scrollTo(0, 0);
   }, 400);
+}
+
+function toggleUrgent() {
+  const cb = document.getElementById('urgentCheck');
+  const row = document.getElementById('urgentRow');
+  cb.checked = !cb.checked;
+  row.classList.toggle('active', cb.checked);
 }
 
 addItem();
