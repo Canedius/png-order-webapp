@@ -410,7 +410,24 @@
       align-items: center;
       justify-content: center;
       background: var(--metal);
+      position: relative;
     }
+    .file-box .thumb-item .thumb-remove {
+      position: absolute;
+      top: 3px; right: 3px;
+      width: 18px; height: 18px;
+      background: rgba(0,0,0,0.75);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 50%;
+      color: #fff;
+      font-size: 11px;
+      line-height: 16px;
+      text-align: center;
+      cursor: pointer;
+      z-index: 10;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .file-box .thumb-item .thumb-remove:active { background: var(--danger); }
     .file-box .thumb-item img {
       width: 100%; height: 100%;
       object-fit: cover;
@@ -1013,20 +1030,49 @@ function buildSku(type, color, size) {
 }
 
 let items = [];
-const thumbCache = new WeakMap();
+const thumbCache = new WeakMap(); // file -> dataURL (80x80 jpeg)
 
-function getThumbsHtml(files) {
+function makeThumb(file) {
+  return new Promise(resolve => {
+    if (!file.type.startsWith('image/')) { resolve(null); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const SIZE = 80;
+        const canvas = document.createElement('canvas');
+        canvas.width = SIZE; canvas.height = SIZE;
+        const ctx = canvas.getContext('2d');
+        const min = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width-min)/2, (img.height-min)/2, min, min, 0, 0, SIZE, SIZE);
+        resolve(canvas.toDataURL('image/jpeg', 0.5));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function getThumbsHtml(files, itemId, field) {
   if (!files || !files.length) return '';
   const n = Math.min(files.length, 5);
-  const items = files.slice(0, 5).map(file => {
+  const thumbItems = files.slice(0, 5).map((file, idx) => {
+    const removeBtn = `<button class="thumb-remove" onclick="event.stopPropagation();removeFile(${itemId},'${field}',${idx})" type="button">✕</button>`;
     if (file.type && file.type.startsWith('image/')) {
-      if (!thumbCache.has(file)) thumbCache.set(file, URL.createObjectURL(file));
-      return `<div class="thumb-item"><img src="${thumbCache.get(file)}" alt=""></div>`;
+      const src = thumbCache.get(file) || '';
+      return `<div class="thumb-item">${removeBtn}${src ? `<img src="${src}" alt="">` : `<span class="ext-label">...</span>`}</div>`;
     }
     const ext = file.name?.split('.').pop()?.toUpperCase() || '?';
-    return `<div class="thumb-item"><span class="ext-label">.${ext}</span></div>`;
+    return `<div class="thumb-item">${removeBtn}<span class="ext-label">.${ext}</span></div>`;
   }).join('');
-  return `<div class="thumbs-grid n${n}">${items}</div>`;
+  return `<div class="thumbs-grid n${n}">${thumbItems}</div>`;
+}
+
+function removeFile(itemId, field, idx) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  item[field].splice(idx, 1);
+  renderFileBox(itemId, field);
 }
 
 function addItem() {
@@ -1081,7 +1127,7 @@ function renderItems() {
           <div class="files-col">
             <div class="file-box ${(item.vizFiles || []).length ? 'has-files' : ''}" onclick="this.querySelector('input').click()">
               ${(item.vizFiles || []).length
-                ? `${getThumbsHtml(item.vizFiles)}
+                ? `${getThumbsHtml(item.vizFiles, item.id, 'vizFiles')}
                    <div class="overlay-label">Візуалізація</div>`
                 : `<div class="icon">🖼</div><div class="text">Візуалі-<br>зація</div>`}
               <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg"
@@ -1089,7 +1135,7 @@ function renderItems() {
             </div>
             <div class="file-box ${(item.printFiles || []).length ? 'has-files' : ''}" onclick="this.querySelector('input').click()">
               ${(item.printFiles || []).length
-                ? `${getThumbsHtml(item.printFiles)}
+                ? `${getThumbsHtml(item.printFiles, item.id, 'printFiles')}
                    <div class="overlay-label">Для друку</div>`
                 : `<div class="icon">🖨</div><div class="text">Файли<br>для друку</div>`}
               <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg,.ai,.cdr,.eps,.psd"
@@ -1137,19 +1183,26 @@ function renderFileBox(itemId, field) {
   const hasFiles = files.length > 0;
   box.className = 'file-box' + (hasFiles ? ' has-files' : '');
   box.innerHTML = hasFiles
-    ? `${getThumbsHtml(files)}<div class="overlay-label">${field === 'vizFiles' ? 'Візуалізація' : 'Для друку'}</div>`
+    ? `${getThumbsHtml(files, item.id, field)}<div class="overlay-label">${field === 'vizFiles' ? 'Візуалізація' : 'Для друку'}</div>`
     : `<div class="icon">${field === 'vizFiles' ? '🖼' : '🖨'}</div><div class="text">${field === 'vizFiles' ? 'Візуалі-<br>зація' : 'Файли<br>для друку'}</div>`;
   box.appendChild(inputEl);
 }
 
-function addFiles(itemId, field, input) {
+async function addFiles(itemId, field, input) {
   const item = items.find(i => i.id === itemId);
   if (!item) return;
+  const newFiles = [];
   for (const file of input.files) {
-    if (item[field].length >= 5) break;
-    item[field].push(file);
+    if (item[field].length + newFiles.length >= 5) break;
+    newFiles.push(file);
   }
   input.value = '';
+  // Generate thumbnails first, then render once
+  await Promise.all(newFiles.map(async file => {
+    const thumb = await makeThumb(file);
+    if (thumb) thumbCache.set(file, thumb);
+    item[field].push(file);
+  }));
   renderFileBox(itemId, field);
 }
 
@@ -1159,10 +1212,12 @@ document.addEventListener('paste', (e) => {
   if (!files.length || !items.length) return;
   e.preventDefault();
   const item = items[items.length - 1];
-  for (const file of files) {
-    if (item.vizFiles.length >= 5) break;
-    item.vizFiles.push(file);
-  }
+  const toAdd = files.filter(() => item.vizFiles.length < 5);
+  await Promise.all(toAdd.map(async file => {
+    const thumb = await makeThumb(file);
+    if (thumb) thumbCache.set(file, thumb);
+    if (item.vizFiles.length < 5) item.vizFiles.push(file);
+  }));
   renderFileBox(item.id, 'vizFiles');
 });
 
