@@ -825,7 +825,7 @@
     <input type="text" id="recipientName" placeholder="Шевченко Іван Петрович">
 
     <label>Телефон *</label>
-    <input type="tel" id="recipientPhone" placeholder="+380 XX XXX XX XX" value="+380 ">
+    <input type="tel" id="recipientPhone" placeholder="+38 0XX XXX XX XX" value="+38 ">
 
     <label>Місто *</label>
     <div class="autocomplete-wrap" id="cityWrap">
@@ -864,20 +864,20 @@ const tg = window.Telegram?.WebApp || {};
 if (tg.ready) tg.ready();
 if (tg.expand) tg.expand();
 
-// ── Phone mask +380 XX XXX XX XX ──
+// ── Phone mask +38 0XX XXX XX XX ──
 const phoneInput = document.getElementById('recipientPhone');
-const PHONE_PREFIX = '+380 ';
+const PHONE_PREFIX = '+38 ';
 
 phoneInput.addEventListener('input', () => {
   let raw = phoneInput.value.replace(/\D/g, '');
-  if (!raw.startsWith('380')) raw = '380' + raw.replace(/^380?/, '');
-  raw = raw.substring(0, 12); // 380 + 9 digits
-  const digits = raw.substring(3);
-  let formatted = '+380';
-  if (digits.length > 0) formatted += ' ' + digits.substring(0, 2);
-  if (digits.length > 2) formatted += ' ' + digits.substring(2, 5);
-  if (digits.length > 5) formatted += ' ' + digits.substring(5, 7);
-  if (digits.length > 7) formatted += ' ' + digits.substring(7, 9);
+  if (!raw.startsWith('38')) raw = '38' + raw.replace(/^38?/, '');
+  raw = raw.substring(0, 12); // 38 + 10 digits
+  const digits = raw.substring(2);
+  let formatted = '+38';
+  if (digits.length > 0) formatted += ' ' + digits.substring(0, 3);
+  if (digits.length > 3) formatted += ' ' + digits.substring(3, 6);
+  if (digits.length > 6) formatted += ' ' + digits.substring(6, 8);
+  if (digits.length > 8) formatted += ' ' + digits.substring(8, 10);
   phoneInput.value = formatted;
 });
 
@@ -1375,7 +1375,7 @@ function resetForm() {
     items = [];
     addItem();
     document.getElementById('recipientName').value = '';
-    phoneInput.value = '+380 ';
+    phoneInput.value = '+38 ';
     clearCity();
     clearWarehouse();
     document.getElementById('orderComment').value = '';
