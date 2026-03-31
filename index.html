@@ -1378,8 +1378,8 @@ function getFormData() {
 
   formData.append('order', JSON.stringify(orderData));
   formData.append('urgent', document.getElementById('urgentCheck').checked ? 'true' : 'false');
-  globalVizFiles.forEach((f, i) => formData.append(`viz_${i}`, f));
-  globalPrintFiles.forEach((f, i) => formData.append(`print_${i}`, f));
+  globalVizFiles.forEach((f, i) => formData.append(`item_viz_${i}`, f));
+  globalPrintFiles.forEach((f, i) => formData.append(`item_print_${i}`, f));
   return formData;
 }
 
