@@ -819,6 +819,22 @@
 
   <button class="add-item-btn" onclick="addItem()">+ ДОДАТИ ПОЗИЦІЮ</button>
 
+  <div class="section-title">Файли для замовлення</div>
+  <div class="delivery-section" style="display:flex;gap:12px;justify-content:center;">
+    <div class="file-box" id="globalVizBox" onclick="this.querySelector('input').click()">
+      <div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+      <div class="text">Візуалі-<br>зація</div>
+      <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg"
+        onchange="addGlobalFiles('viz', this)" onclick="event.stopPropagation()">
+    </div>
+    <div class="file-box" id="globalPrintBox" onclick="this.querySelector('input').click()">
+      <div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+      <div class="text">Файли<br>для друку</div>
+      <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg,.ai,.cdr,.eps,.psd"
+        onchange="addGlobalFiles('print', this)" onclick="event.stopPropagation()">
+    </div>
+  </div>
+
   <div class="section-title">Доставка</div>
   <div class="delivery-section">
     <label>ПІБ отримувача *</label>
@@ -1083,6 +1099,8 @@ function buildSku(type, color, size) {
 }
 
 let items = [];
+let globalVizFiles = [];
+let globalPrintFiles = [];
 const thumbCache = new WeakMap(); // file -> dataURL (80x80 jpeg)
 
 function makeThumb(file) {
@@ -1128,9 +1146,57 @@ function removeFile(itemId, field, idx) {
   renderFileBox(itemId, field);
 }
 
+function removeGlobalFile(field, idx) {
+  if (field === 'viz') globalVizFiles.splice(idx, 1);
+  else globalPrintFiles.splice(idx, 1);
+  renderGlobalFileBox(field);
+}
+
+function getGlobalThumbsHtml(files, field) {
+  if (!files || !files.length) return '';
+  const n = Math.min(files.length, 5);
+  const thumbItems = files.map((file, idx) => {
+    const removeBtn = `<button class="thumb-remove" onclick="event.stopPropagation();removeGlobalFile('${field}',${idx})" type="button">✕</button>`;
+    if (file.type && file.type.startsWith('image/')) {
+      const src = thumbCache.get(file) || '';
+      return `<div class="thumb-item">${removeBtn}${src ? `<img src="${src}" alt="">` : `<span class="ext-label">...</span>`}</div>`;
+    }
+    const ext = file.name?.split('.').pop()?.toUpperCase() || '?';
+    return `<div class="thumb-item">${removeBtn}<span class="ext-label">.${ext}</span></div>`;
+  }).join('');
+  return `<div class="thumbs-grid n${n}">${thumbItems}</div>`;
+}
+
+function renderGlobalFileBox(field) {
+  const box = document.getElementById(field === 'viz' ? 'globalVizBox' : 'globalPrintBox');
+  if (!box) return;
+  const files = field === 'viz' ? globalVizFiles : globalPrintFiles;
+  const inputEl = box.querySelector('input[type="file"]');
+  const hasFiles = files.length > 0;
+  box.className = 'file-box' + (hasFiles ? ' has-files' : '');
+  box.innerHTML = hasFiles
+    ? `${getGlobalThumbsHtml(files, field)}<div class="overlay-label">${field === 'viz' ? 'Візуалізація' : 'Для друку'}</div>`
+    : field === 'viz'
+      ? `<div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div><div class="text">Візуалі-<br>зація</div>`
+      : `<div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div class="text">Файли<br>для друку</div>`;
+  box.appendChild(inputEl);
+}
+
+async function addGlobalFiles(field, input) {
+  const arr = field === 'viz' ? globalVizFiles : globalPrintFiles;
+  const newFiles = [...input.files];
+  input.value = '';
+  await Promise.all(newFiles.map(async file => {
+    const thumb = await makeThumb(file);
+    if (thumb) thumbCache.set(file, thumb);
+    arr.push(file);
+  }));
+  renderGlobalFileBox(field);
+}
+
 function addItem() {
   const id = Date.now();
-  items.push({ id, type: '', color: 'Чорний', size: '', qty: 1, customization: '', vizFiles: [], printFiles: [] });
+  items.push({ id, type: '', color: 'Чорний', size: '', qty: 1, customization: '' });
   renderItems();
 }
 
@@ -1155,8 +1221,6 @@ function renderItems() {
       </select>
 
       <div class="color-block ${item.type ? 'visible' : ''}">
-        <div class="fields-and-files">
-          <div class="fields-col">
             <label>Колір *</label>
             <div class="colors-row">
               ${(COLORS_BY_TYPE[item.type] || []).map(c => `
@@ -1175,27 +1239,6 @@ function renderItems() {
                   onclick="updateItem(${item.id}, 'size', '${s}')">${s}</button>
               `).join('')}
             </div>
-          </div>
-
-          <div class="files-col">
-            <div class="file-box ${(item.vizFiles || []).length ? 'has-files' : ''}" onclick="this.querySelector('input').click()">
-              ${(item.vizFiles || []).length
-                ? `${getThumbsHtml(item.vizFiles, item.id, 'vizFiles')}
-                   <div class="overlay-label">Візуалізація</div>`
-                : `<div class="icon">🖼</div><div class="text">Візуалі-<br>зація</div>`}
-              <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg"
-                onchange="addFiles(${item.id}, 'vizFiles', this)" onclick="event.stopPropagation()">
-            </div>
-            <div class="file-box ${(item.printFiles || []).length ? 'has-files' : ''}" onclick="this.querySelector('input').click()">
-              ${(item.printFiles || []).length
-                ? `${getThumbsHtml(item.printFiles, item.id, 'printFiles')}
-                   <div class="overlay-label">Для друку</div>`
-                : `<div class="icon">🖨</div><div class="text">Файли<br>для друку</div>`}
-              <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg,.ai,.cdr,.eps,.psd"
-                onchange="addFiles(${item.id}, 'printFiles', this)" onclick="event.stopPropagation()">
-            </div>
-          </div>
-        </div>
 
         <label>Кількість *</label>
         <input type="number" min="1" value="${item.qty}"
@@ -1255,18 +1298,17 @@ async function addFiles(itemId, field, input) {
   renderFileBox(itemId, field);
 }
 
-// ── Paste from clipboard → vizFiles останньої позиції ──
+// ── Paste from clipboard → globalVizFiles ──
 document.addEventListener('paste', async (e) => {
   const files = [...(e.clipboardData?.files || [])];
-  if (!files.length || !items.length) return;
+  if (!files.length) return;
   e.preventDefault();
-  const item = items[items.length - 1];
   await Promise.all(files.map(async file => {
     const thumb = await makeThumb(file);
     if (thumb) thumbCache.set(file, thumb);
-    item.vizFiles.push(file);
+    globalVizFiles.push(file);
   }));
-  renderFileBox(item.id, 'vizFiles');
+  renderGlobalFileBox('viz');
 });
 
 function validate() {
@@ -1279,14 +1321,14 @@ function validate() {
     if (!item.color) errors.push(`Оберіть колір${n}`);
     if (!item.size) errors.push(`Оберіть розмір${n}`);
     if (!item.qty || item.qty < 1) errors.push(`Вкажіть кількість${n}`);
-    if (!(item.vizFiles || []).length) errors.push(`Додайте візуалізацію${n}`);
-    if (!(item.printFiles || []).length) errors.push(`Додайте файли для друку${n}`);
   }
 
   const name = document.getElementById('recipientName').value.trim();
   const phoneDigits = document.getElementById('recipientPhone').value.replace(/\D/g, '');
   const comment = document.getElementById('orderComment').value.trim();
 
+  if (!globalVizFiles.length) errors.push('Додайте візуалізацію');
+  if (!globalPrintFiles.length) errors.push('Додайте файли для друку');
   if (!name) errors.push('Вкажіть ПІБ отримувача');
   if (phoneDigits.length !== 12) errors.push('Введіть повний номер телефону');
   if (!selectedCity) errors.push('Оберіть місто');
@@ -1331,15 +1373,13 @@ function getFormData() {
       { uuid: 'OR_1010', value: 'DTF' }
     ],
     buyer_comment: comment,
-    ordered_at: new Date().toISOString().replace('T', ' ').substring(0, 19),
+    ordered_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19),
   };
 
   formData.append('order', JSON.stringify(orderData));
   formData.append('urgent', document.getElementById('urgentCheck').checked ? 'true' : 'false');
-  items.forEach((item, idx) => {
-    (item.vizFiles || []).forEach((f, i) => formData.append(`item${idx}_viz_${i}`, f));
-    (item.printFiles || []).forEach((f, i) => formData.append(`item${idx}_print_${i}`, f));
-  });
+  globalVizFiles.forEach((f, i) => formData.append(`viz_${i}`, f));
+  globalPrintFiles.forEach((f, i) => formData.append(`print_${i}`, f));
   return formData;
 }
 
