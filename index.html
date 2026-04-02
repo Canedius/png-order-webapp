@@ -1419,6 +1419,10 @@ function resetForm() {
   setTimeout(() => {
     shutter.classList.remove('active', 'closing');
     items = [];
+    globalVizFiles = [];
+    globalPrintFiles = [];
+    renderGlobalFileBox('viz');
+    renderGlobalFileBox('print');
     addItem();
     document.getElementById('recipientName').value = '';
     phoneInput.value = '+38 ';
