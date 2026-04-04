@@ -842,6 +842,7 @@
 
     <label>Телефон *</label>
     <input type="tel" id="recipientPhone" placeholder="+38 0XX XXX XX XX" value="+38 ">
+    <div class="error-text" id="phoneError" style="display:none">Невірний номер телефону</div>
 
     <label>Місто *</label>
     <div class="autocomplete-wrap" id="cityWrap">
@@ -884,15 +885,28 @@ if (tg.expand) tg.expand();
 const phoneInput = document.getElementById('recipientPhone');
 const PHONE_PREFIX = '+38 ';
 
+function normalizePhone(raw) {
+  // Strip duplicate country code (e.g. pasted into pre-filled +38 field → 3838...)
+  while (raw.startsWith('3838')) raw = raw.substring(2);
+  if (raw.startsWith('380'))     {} // fine
+  else if (raw.startsWith('38')) {} // partial, fine
+  else if (raw.startsWith('80')) raw = '3' + raw;
+  else if (raw.startsWith('0'))  raw = '38' + raw;
+  else                           raw = '38' + raw;
+  return raw.substring(0, 12);
+}
+
+function validatePhone() {
+  const digits = phoneInput.value.replace(/\D/g, '');
+  const err = document.getElementById('phoneError');
+  const valid = digits.length === 12 && digits.startsWith('380');
+  err.style.display = (digits.length >= 4 && !valid) ? 'block' : 'none';
+  phoneInput.classList.toggle('error', digits.length >= 4 && !valid);
+}
+
 phoneInput.addEventListener('input', () => {
   let raw = phoneInput.value.replace(/\D/g, '');
-  // Normalize to 12 digits starting with 38 (38 + 0XX XXX XX XX)
-  if (raw.startsWith('380'))      raw = raw.substring(0, 12);
-  else if (raw.startsWith('38'))  raw = raw.substring(0, 12);
-  else if (raw.startsWith('80'))  raw = '3' + raw;
-  else if (raw.startsWith('0'))   raw = '38' + raw;
-  else                            raw = '38' + raw;
-  raw = raw.substring(0, 12);
+  raw = normalizePhone(raw);
   const digits = raw.substring(2);
   let formatted = '+38';
   if (digits.length > 0) formatted += ' ' + digits.substring(0, 3);
@@ -900,6 +914,7 @@ phoneInput.addEventListener('input', () => {
   if (digits.length > 6) formatted += ' ' + digits.substring(6, 8);
   if (digits.length > 8) formatted += ' ' + digits.substring(8, 10);
   phoneInput.value = formatted;
+  validatePhone();
 });
 
 phoneInput.addEventListener('keydown', (e) => {
