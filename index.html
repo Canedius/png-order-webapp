@@ -886,8 +886,13 @@ const PHONE_PREFIX = '+38 ';
 
 phoneInput.addEventListener('input', () => {
   let raw = phoneInput.value.replace(/\D/g, '');
-  if (!raw.startsWith('38')) raw = '38' + raw.replace(/^38?/, '');
-  raw = raw.substring(0, 12); // 38 + 10 digits
+  // Normalize to 12 digits starting with 38 (38 + 0XX XXX XX XX)
+  if (raw.startsWith('380'))      raw = raw.substring(0, 12);
+  else if (raw.startsWith('38'))  raw = raw.substring(0, 12);
+  else if (raw.startsWith('80'))  raw = '3' + raw;
+  else if (raw.startsWith('0'))   raw = '38' + raw;
+  else                            raw = '38' + raw;
+  raw = raw.substring(0, 12);
   const digits = raw.substring(2);
   let formatted = '+38';
   if (digits.length > 0) formatted += ' ' + digits.substring(0, 3);
