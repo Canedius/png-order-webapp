@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Modern Armor — Worn Metal</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Russo+One&family=Roboto+Condensed:wght@400;700&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #1e1e1c;
+      --metal: #2a2a28;
+      --metal-light: #3a3937;
+      --metal-edge: #4a4946;
+      --rivet: #555550;
+      --rust: #8b5e3c;
+      --rust-light: #a67c52;
+      --accent: #c4913e;
+      --accent-bright: #e8b44a;
+      --text: #d4cfc0;
+      --text-dim: #7a756a;
+      --text-bright: #eae5d6;
+      --danger: #a63b2e;
+      --stripe: rgba(0,0,0,0.15);
+    }
+
+    body {
+      font-family: 'Roboto Condensed', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 0;
+      min-height: 100vh;
+      /* Subtle noise texture */
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    }
+
+    /* === HERO WITH LOGO === */
+    .hero {
+      position: relative;
+      background: linear-gradient(180deg, #252523 0%, var(--bg) 100%);
+      padding: 28px 16px 0;
+      text-align: center;
+      overflow: visible;
+    }
+
+    /* Hazard stripes at top */
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 8px;
+      background: repeating-linear-gradient(
+        -45deg,
+        var(--accent) 0px, var(--accent) 8px,
+        #1e1e1c 8px, #1e1e1c 16px
+      );
+    }
+
+    .logo-plate {
+      display: inline-block;
+      position: relative;
+      padding: 28px 50px;
+      margin-bottom: -50px;
+      z-index: 2;
+    }
+
+    /* Metal plate behind logo */
+    .logo-plate::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(145deg, #353530 0%, #252520 50%, #2d2d28 100%);
+      border: 2px solid var(--metal-edge);
+      border-radius: 8px;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.05),
+        inset 0 -2px 4px rgba(0,0,0,0.3),
+        0 8px 24px rgba(0,0,0,0.5);
+    }
+
+    /* Rivets */
+    .logo-plate::after {
+      content: '';
+      position: absolute;
+      inset: 8px;
+      border: none;
+      background:
+        radial-gradient(circle at 12px 12px, var(--rivet) 3px, transparent 3px),
+        radial-gradient(circle at calc(100% - 12px) 12px, var(--rivet) 3px, transparent 3px),
+        radial-gradient(circle at 12px calc(100% - 12px), var(--rivet) 3px, transparent 3px),
+        radial-gradient(circle at calc(100% - 12px) calc(100% - 12px), var(--rivet) 3px, transparent 3px);
+    }
+
+    .logo-plate img {
+      position: relative;
+      z-index: 1;
+      width: 260px;
+      height: auto;
+      margin: -30px -60px;
+      margin-left: -30px;
+      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)) brightness(0.95) sepia(0.1);
+    }
+
+    /* === MAIN CONTENT === */
+    .content {
+      position: relative;
+      padding: 68px 16px 100px;
+    }
+
+    /* Welded seam line */
+    .content::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 20px; right: 20px;
+      height: 3px;
+      background: linear-gradient(90deg,
+        transparent,
+        var(--metal-edge) 10%,
+        var(--rivet) 30%,
+        var(--metal-edge) 50%,
+        var(--rivet) 70%,
+        var(--metal-edge) 90%,
+        transparent
+      );
+      border-radius: 2px;
+    }
+
+    h1 {
+      font-family: 'Russo One', sans-serif;
+      font-size: 16px;
+      text-align: center;
+      margin-bottom: 24px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* === CARD === */
+    .order-item {
+      background: linear-gradient(180deg, var(--metal) 0%, #242422 100%);
+      border: 1px solid var(--metal-edge);
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 14px;
+      position: relative;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.03),
+        0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    /* Scratches texture */
+    .order-item::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 6px;
+      background: repeating-linear-gradient(
+        105deg,
+        transparent 0px,
+        transparent 20px,
+        rgba(255,255,255,0.01) 20px,
+        rgba(255,255,255,0.01) 21px
+      );
+      pointer-events: none;
+    }
+
+    .order-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--metal-edge);
+    }
+
+    .order-item-header span {
+      font-family: 'Russo One', sans-serif;
+      font-size: 14px;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .remove-item {
+      background: var(--danger);
+      border: none;
+      color: #fff;
+      font-size: 13px;
+      font-family: 'Roboto Condensed', sans-serif;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 4px 12px;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+      margin-top: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    select, input, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--metal-edge);
+      border-radius: 4px;
+      font-size: 15px;
+      font-family: 'Roboto Condensed', sans-serif;
+      background: var(--metal-light);
+      color: var(--text-bright);
+      -webkit-appearance: none;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+      transition: border-color 0.2s;
+    }
+
+    select:focus, input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 0 0 2px rgba(196, 145, 62, 0.15);
+    }
+
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%23c4913e' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    textarea { resize: vertical; min-height: 60px; }
+
+    input::placeholder, textarea::placeholder {
+      color: var(--text-dim); opacity: 0.5;
+    }
+
+    .sizes-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .size-btn {
+      padding: 8px 14px;
+      border: 1px solid var(--metal-edge);
+      border-radius: 4px;
+      background: var(--metal-light);
+      color: var(--text-dim);
+      font-family: 'Russo One', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+
+    .size-btn.active {
+      background: var(--accent);
+      color: #1e1e1c;
+      border-color: var(--accent-bright);
+      box-shadow: 0 0 8px rgba(196, 145, 62, 0.3);
+    }
+
+    .add-item-btn {
+      width: 100%;
+      padding: 14px;
+      border: 2px dashed var(--metal-edge);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--accent);
+      font-family: 'Russo One', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .section-title {
+      font-family: 'Russo One', sans-serif;
+      font-size: 11px;
+      color: var(--rust-light);
+      margin-top: 24px;
+      margin-bottom: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 2px;
+      background: linear-gradient(90deg, var(--metal-edge), transparent);
+    }
+
+    .delivery-section {
+      background: linear-gradient(180deg, var(--metal) 0%, #242422 100%);
+      border: 1px solid var(--metal-edge);
+      border-radius: 6px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .file-upload-area {
+      border: 2px dashed var(--metal-edge);
+      border-radius: 6px;
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      background: rgba(196, 145, 62, 0.03);
+    }
+
+    .file-upload-area input[type="file"] {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;
+    }
+
+    .file-upload-area .icon { font-size: 32px; margin-bottom: 6px; }
+    .file-upload-area .text { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+
+    .file-list { margin-top: 8px; }
+    .file-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 0; font-size: 13px; border-bottom: 1px solid var(--metal-edge);
+    }
+    .file-item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 8px; font-size: 12px; }
+    .file-item .remove { color: var(--danger); cursor: pointer; font-size: 18px; border: none; background: none; }
+    .preview-img { width: 44px; height: 44px; object-fit: cover; border-radius: 3px; margin-right: 8px; border: 1px solid var(--metal-edge); }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="logo-plate">
+    <img src="logo.svg" alt="Modern Armor">
+  </div>
+</div>
+
+<div class="content">
+  <h1>Замовлення на друк</h1>
+
+  <div class="order-item">
+    <div class="order-item-header">
+      <span>Позиція 1</span>
+    </div>
+    <label>Тип виробу *</label>
+    <select><option>-- оберіть тип --</option><option>Футболка</option><option>Худі легкий</option><option>Худі теплий</option></select>
+    <label>Колір *</label>
+    <select><option>-- оберіть колір --</option><option>Чорний</option><option>Хакі</option><option>Олива</option></select>
+    <label>Розмір *</label>
+    <div class="sizes-row">
+      <button class="size-btn">XS</button><button class="size-btn">S</button><button class="size-btn active">M</button>
+      <button class="size-btn">L</button><button class="size-btn">XL</button><button class="size-btn">XXL</button><button class="size-btn">3XL</button>
+    </div>
+    <label>Кількість *</label>
+    <input type="number" value="1">
+    <label>Кастомізація</label>
+    <textarea placeholder="Логотип залишаємо, позивний СКІФ на правий рукав..."></textarea>
+  </div>
+
+  <button class="add-item-btn">+ ДОДАТИ ПОЗИЦІЮ</button>
+
+  <div class="section-title">Файли / макети</div>
+  <div class="delivery-section">
+    <div class="file-upload-area">
+      <div class="icon">📎</div>
+      <div class="text">Натисніть для вибору файлів<br>(фото, PDF, макети)</div>
+    </div>
+  </div>
+
+  <div class="section-title">Доставка</div>
+  <div class="delivery-section">
+    <label>ПІБ отримувача *</label>
+    <input type="text" placeholder="Шевченко Іван Петрович">
+    <label>Телефон *</label>
+    <input type="tel" placeholder="0991234567">
+    <label>Нова Пошта *</label>
+    <textarea placeholder="м. Київ, відділення №25"></textarea>
+  </div>
+
+  <div class="section-title">Коментар</div>
+  <div class="delivery-section">
+    <textarea placeholder="Додаткові побажання..."></textarea>
+  </div>
+</div>
+
+</body>
+</html>

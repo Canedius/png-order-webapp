@@ -1398,6 +1398,7 @@ function getFormData() {
 
   formData.append('order', JSON.stringify(orderData));
   formData.append('urgent', document.getElementById('urgentCheck').checked ? 'true' : 'false');
+  formData.append('tg_user_id', tg.initDataUnsafe?.user?.id || '');
   globalVizFiles.forEach((f, i) => formData.append(`item_viz_${i}`, f));
   globalPrintFiles.forEach((f, i) => formData.append(`item_print_${i}`, f));
   return formData;
@@ -1413,7 +1414,7 @@ if (isTg) {
 }
 
 async function submitOrder() {
-  if (isTg && !validate()) return;
+  if (!validate()) return;
   if (isTg) { tg.MainButton.showProgress(); tg.MainButton.disable(); }
   if (isTg) {
     const formData = getFormData();

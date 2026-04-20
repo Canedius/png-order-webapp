@@ -1,7 +1,10 @@
+require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 
-const BOT_TOKEN = '7859846038:AAGiRMU7UOF82tCjBWRH-xMZCz2XZo358Tc';
-const WEBAPP_URL = 'https://canedius.github.io/png-order-webapp/';
+const BOT_TOKEN = process.env.BOT_TOKEN;
+const WEBAPP_URL = process.env.WEBAPP_URL;
+
+if (!BOT_TOKEN) throw new Error('BOT_TOKEN не заданий в .env');
 
 const bot = new TelegramBot(BOT_TOKEN, { polling: true });
 

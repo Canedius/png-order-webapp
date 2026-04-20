@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Modern Armor — Field Command</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Source+Code+Pro:wght@400;600&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #f2ede0;
+      --bg-dark: #e8e1ce;
+      --surface: #ece6d5;
+      --border: #c4b89a;
+      --border-dark: #a69a7c;
+      --accent: #4a5c28;
+      --accent-dark: #374418;
+      --accent-light: #6b8030;
+      --stamp: #8b2e1e;
+      --stamp-light: rgba(139, 46, 30, 0.12);
+      --text: #3a3428;
+      --text-dim: #8a7f6a;
+      --text-light: #5a5040;
+    }
+
+    body {
+      font-family: 'Source Code Pro', monospace;
+      background: var(--bg);
+      color: var(--text);
+      padding: 0;
+      min-height: 100vh;
+      /* Paper/topo texture */
+      background-image:
+        radial-gradient(ellipse at 20% 50%, rgba(200,190,160,0.3) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(180,170,140,0.2) 0%, transparent 40%),
+        url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 50 Q25 45 50 50 T100 50' fill='none' stroke='%23c4b89a' stroke-width='0.3' opacity='0.4'/%3E%3Cpath d='M0 30 Q25 25 50 30 T100 30' fill='none' stroke='%23c4b89a' stroke-width='0.3' opacity='0.3'/%3E%3Cpath d='M0 70 Q25 65 50 70 T100 70' fill='none' stroke='%23c4b89a' stroke-width='0.3' opacity='0.3'/%3E%3C/svg%3E");
+    }
+
+    /* === HERO === */
+    .hero {
+      position: relative;
+      text-align: center;
+      padding: 24px 16px 0;
+      background: linear-gradient(180deg, var(--bg-dark) 0%, var(--bg) 100%);
+      border-bottom: none;
+    }
+
+    .logo-badge {
+      display: inline-block;
+      position: relative;
+      padding: 20px 32px;
+      margin-bottom: -28px;
+      z-index: 2;
+    }
+
+    /* Fabric patch effect */
+    .logo-badge::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--accent-dark);
+      border-radius: 10px;
+      box-shadow:
+        0 4px 16px rgba(0,0,0,0.2),
+        inset 0 0 20px rgba(0,0,0,0.2);
+      /* Stitching border */
+      outline: 2px dashed rgba(255,255,255,0.15);
+      outline-offset: -6px;
+    }
+
+    .logo-badge img {
+      position: relative;
+      z-index: 1;
+      width: 100px;
+      height: auto;
+      filter: brightness(1.5) contrast(0.9);
+    }
+
+    /* === CONTENT === */
+    .content {
+      position: relative;
+      padding: 48px 16px 100px;
+    }
+
+    /* Folding line */
+    .content::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent 5%, var(--border) 20%, var(--border) 80%, transparent 95%);
+    }
+
+    h1 {
+      font-family: 'Black Ops One', cursive;
+      font-size: 16px;
+      text-align: center;
+      margin-bottom: 6px;
+      color: var(--accent-dark);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Document classification stamp */
+    .stamp {
+      position: absolute;
+      top: 56px;
+      right: 20px;
+      color: var(--stamp);
+      font-family: 'Black Ops One', cursive;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      transform: rotate(12deg);
+      border: 2px solid var(--stamp);
+      padding: 3px 10px;
+      opacity: 0.35;
+    }
+
+    /* === CARD === */
+    .order-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 16px;
+      margin-bottom: 14px;
+      position: relative;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    /* Red corner fold */
+    .order-item::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 0; height: 0;
+      border-style: solid;
+      border-width: 0 24px 24px 0;
+      border-color: transparent var(--bg) transparent transparent;
+    }
+
+    .order-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .order-item-header span {
+      font-family: 'Black Ops One', cursive;
+      font-size: 13px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .remove-item {
+      background: transparent;
+      border: 1px solid var(--stamp);
+      color: var(--stamp);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 3px 10px;
+      border-radius: 2px;
+      font-family: 'Source Code Pro', monospace;
+      text-transform: uppercase;
+    }
+
+    label {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-dim);
+      margin-bottom: 4px;
+      margin-top: 14px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    select, input, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      font-size: 14px;
+      font-family: 'Source Code Pro', monospace;
+      background: #fff;
+      color: var(--text);
+      -webkit-appearance: none;
+      transition: border-color 0.2s;
+    }
+
+    select:focus, input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(74, 92, 40, 0.12);
+    }
+
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath fill='%234a5c28' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+      background-color: #fff;
+    }
+
+    textarea { resize: vertical; min-height: 60px; }
+    input::placeholder, textarea::placeholder { color: var(--border); }
+
+    .sizes-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .size-btn {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      background: #fff;
+      color: var(--text-dim);
+      font-family: 'Black Ops One', cursive;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .size-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent-dark);
+    }
+
+    .add-item-btn {
+      width: 100%;
+      padding: 14px;
+      border: 1px dashed var(--border-dark);
+      border-radius: 3px;
+      background: transparent;
+      color: var(--accent);
+      font-family: 'Black Ops One', cursive;
+      font-size: 12px;
+      cursor: pointer;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .section-title {
+      font-family: 'Black Ops One', cursive;
+      font-size: 11px;
+      color: var(--accent);
+      margin-top: 24px;
+      margin-bottom: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .delivery-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+
+    .file-upload-area {
+      border: 1px dashed var(--border-dark);
+      border-radius: 3px;
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      position: relative;
+      background: rgba(74, 92, 40, 0.04);
+    }
+    .file-upload-area input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+    .file-upload-area .icon { font-size: 32px; margin-bottom: 6px; }
+    .file-upload-area .text { font-size: 11px; color: var(--text-dim); letter-spacing: 1px; line-height: 1.6; }
+
+    .file-list { margin-top: 8px; }
+    .file-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; font-size: 12px; border-bottom: 1px dashed var(--border); }
+    .file-item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; margin-right: 8px; }
+    .file-item .remove { color: var(--stamp); cursor: pointer; font-size: 18px; border: none; background: none; }
+    .preview-img { width: 44px; height: 44px; object-fit: cover; border-radius: 2px; margin-right: 8px; border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="logo-badge">
+    <img src="logo.svg" alt="Modern Armor">
+  </div>
+</div>
+
+<div class="content">
+  <div class="stamp">Бланк</div>
+
+  <h1>Замовлення на друк</h1>
+  <div class="subtitle">Форма подачі замовлення</div>
+
+  <div class="order-item">
+    <div class="order-item-header">
+      <span>Позиція №1</span>
+    </div>
+    <label>Тип виробу *</label>
+    <select><option>-- оберіть тип --</option><option>Футболка</option><option>Худі легкий</option><option>Худі теплий</option></select>
+    <label>Колір *</label>
+    <select><option>-- оберіть колір --</option><option>Чорний</option><option>Хакі</option><option>Олива</option></select>
+    <label>Розмір *</label>
+    <div class="sizes-row">
+      <button class="size-btn">XS</button><button class="size-btn">S</button><button class="size-btn active">M</button>
+      <button class="size-btn">L</button><button class="size-btn">XL</button><button class="size-btn">XXL</button><button class="size-btn">3XL</button>
+    </div>
+    <label>Кількість *</label>
+    <input type="number" value="1">
+    <label>Кастомізація</label>
+    <textarea placeholder="Логотип залишаємо, позивний СКІФ на правий рукав..."></textarea>
+  </div>
+
+  <button class="add-item-btn">+ Додати позицію</button>
+
+  <div class="section-title">Файли / макети</div>
+  <div class="delivery-section">
+    <div class="file-upload-area">
+      <div class="icon">📎</div>
+      <div class="text">Натисніть для вибору файлів<br>(фото, PDF, макети)</div>
+    </div>
+  </div>
+
+  <div class="section-title">Доставка</div>
+  <div class="delivery-section">
+    <label>ПІБ отримувача *</label>
+    <input type="text" placeholder="Шевченко Іван Петрович">
+    <label>Телефон *</label>
+    <input type="tel" placeholder="0991234567">
+    <label>Нова Пошта *</label>
+    <textarea placeholder="м. Київ, відділення №25"></textarea>
+  </div>
+
+  <div class="section-title">Коментар</div>
+  <div class="delivery-section">
+    <textarea placeholder="Додаткові побажання..."></textarea>
+  </div>
+</div>
+
+</body>
+</html>
