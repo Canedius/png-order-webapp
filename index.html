@@ -1823,8 +1823,8 @@ function validate() {
   const phoneDigits = document.getElementById('recipientPhone').value.replace(/\D/g, '');
   const comment = document.getElementById('orderComment').value.trim();
 
-  if (!globalVizFiles.length) errors.push('Додайте візуалізацію');
-  if (!globalPrintFiles.length) errors.push('Додайте файли для друку');
+  if (!globalVizFiles.length || globalVizFiles.some(f => !f.size)) errors.push('Додайте візуалізацію');
+  if (!globalPrintFiles.length || globalPrintFiles.some(f => !f.size)) errors.push('Додайте файли для друку');
   if (!name) errors.push('Вкажіть ПІБ отримувача');
   if (phoneDigits.length !== 12) errors.push('Введіть повний номер телефону');
   if (!selectedCity) errors.push('Оберіть місто');
@@ -1905,18 +1905,58 @@ function updateCasePlate() {
   statusEl.classList.toggle('red', !!urgent);
 }
 
+let isSubmitting = false;
 async function submitOrder() {
+  if (isSubmitting) return;
   if (!validate()) return;
-  if (isTg) { tg.MainButton.showProgress(); tg.MainButton.disable(); }
+  isSubmitting = true;
+  const WEBHOOK_URL = 'https://primary-production-eeb3.up.railway.app/webhook/png-order';
+  const desktopBtn = document.getElementById('desktopSubmit');
+  const fallbackBtn = document.getElementById('fallbackSubmit');
+  if (desktopBtn) { desktopBtn.disabled = true; desktopBtn.textContent = 'Завантаження файлів…'; }
+  if (fallbackBtn) { fallbackBtn.disabled = true; fallbackBtn.textContent = 'Завантаження файлів…'; }
   if (isTg) {
-    const formData = getFormData();
-    const WEBHOOK_URL = 'https://primary-production-eeb3.up.railway.app/webhook/png-order';
-    fetch(WEBHOOK_URL, { method: 'POST', body: formData });
-    tg.MainButton.hideProgress(); tg.MainButton.hide();
-  } else {
-    document.getElementById('fallbackSubmit').style.display = 'none';
+    tg.MainButton.showProgress();
+    tg.MainButton.disable();
+    tg.MainButton.setText('Завантаження файлів…');
+    if (tg.enableClosingConfirmation) tg.enableClosingConfirmation();
   }
-  showShutter();
+  try {
+    const formData = getFormData();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+    let res;
+    try {
+      res = await fetch(WEBHOOK_URL, { method: 'POST', body: formData, signal: controller.signal });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (isTg) {
+      tg.MainButton.hideProgress();
+      tg.MainButton.enable();
+      tg.MainButton.setText('ВІДПРАВИТИ ЗАМОВЛЕННЯ');
+      tg.MainButton.hide();
+      if (tg.disableClosingConfirmation) tg.disableClosingConfirmation();
+    }
+    if (desktopBtn) { desktopBtn.disabled = false; desktopBtn.textContent = 'Відправити замовлення'; }
+    if (fallbackBtn) { fallbackBtn.disabled = false; fallbackBtn.textContent = 'Відправити замовлення'; }
+    showShutter();
+  } catch (err) {
+    if (isTg) {
+      tg.MainButton.hideProgress();
+      tg.MainButton.enable();
+      tg.MainButton.setText('ВІДПРАВИТИ ЗАМОВЛЕННЯ');
+      if (tg.disableClosingConfirmation) tg.disableClosingConfirmation();
+      tg.showAlert('Не вдалося відправити: ' + err.message + '. Перевірте інтернет і спробуйте ще раз.');
+    } else {
+      alert('Не вдалося відправити: ' + err.message + '. Перевірте інтернет і спробуйте ще раз.');
+    }
+    if (desktopBtn) { desktopBtn.disabled = false; desktopBtn.textContent = 'Відправити замовлення'; }
+    if (fallbackBtn) { fallbackBtn.disabled = false; fallbackBtn.textContent = 'Відправити замовлення'; }
+  } finally {
+    isSubmitting = false;
+  }
 }
 
 if (isTg) tg.MainButton.onClick(submitOrder);
