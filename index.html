@@ -1203,6 +1203,10 @@
       position: relative;
       transition: color 0.2s, background 0.2s;
       white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
     }
     @media (min-width: 768px) {
       .tab-btn { padding: 14px 18px; font-size: 13px; letter-spacing: 3px; }
@@ -1216,6 +1220,24 @@
       left: 12px; right: 12px; bottom: 0;
       height: 3px;
       background: var(--accent);
+    }
+    .tab-btn .tab-logo {
+      height: 23px;
+      width: auto;
+      flex-shrink: 0;
+      filter: brightness(0) invert(1);
+      opacity: 0.55;
+      transition: opacity 0.2s, filter 0.2s;
+    }
+    .tab-btn[data-form="armor"] .tab-logo { height: 31px; }
+    @media (min-width: 768px) {
+      .tab-btn .tab-logo { height: 29px; }
+      .tab-btn[data-form="armor"] .tab-logo { height: 39px; }
+    }
+    .tab-btn:hover .tab-logo { opacity: 0.85; }
+    .tab-btn.active .tab-logo {
+      opacity: 1;
+      filter: brightness(0) invert(1) drop-shadow(0 0 4px currentColor);
     }
 
     /* ════════════════════════════════════════════════════════════ */
@@ -1737,8 +1759,14 @@
 <body class="theme-armor">
 
 <nav class="form-tabs" id="formTabs" role="tablist" aria-label="Перемикач форм клієнтів">
-  <button type="button" class="tab-btn active" data-form="armor" role="tab" aria-selected="true" aria-controls="orderForm">Modern Armor</button>
-  <button type="button" class="tab-btn" data-form="warrior" role="tab" aria-selected="false" aria-controls="orderForm">Special Warrior</button>
+  <button type="button" class="tab-btn active" data-form="armor" role="tab" aria-selected="true" aria-controls="orderForm">
+    <img class="tab-logo" src="logo.svg" alt="" aria-hidden="true">
+    <span>Modern Armor</span>
+  </button>
+  <button type="button" class="tab-btn" data-form="warrior" role="tab" aria-selected="false" aria-controls="orderForm">
+    <img class="tab-logo" src="%D0%9B%D0%BE%D0%B3%D0%BE%D1%82%D0%B8%D0%BF%20specialwarrior_shop.svg" alt="" aria-hidden="true">
+    <span>Special Warrior</span>
+  </button>
 </nav>
 
 <div class="anim-overlay" id="animLock">
