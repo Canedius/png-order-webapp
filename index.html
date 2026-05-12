@@ -1174,13 +1174,591 @@
     @media (min-width: 1400px) {
       .desktop-grid { grid-template-columns: minmax(0, 1fr) 420px; gap: 40px; }
     }
+
+    /* ── Form tabs (browser only, hidden in Telegram) ── */
+    #orderForm { display: contents; }
+    .form-tabs {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-self: stretch;
+      width: 100%;
+      background: var(--metal);
+      border-bottom: 1px solid var(--metal-edge);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px 8px;
+      background: transparent;
+      border: none;
+      border-right: 1px solid var(--metal-edge);
+      color: var(--text-dim);
+      font-family: 'Russo One', sans-serif;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s, background 0.2s;
+      white-space: nowrap;
+    }
+    @media (min-width: 768px) {
+      .tab-btn { padding: 14px 18px; font-size: 13px; letter-spacing: 3px; }
+    }
+    .tab-btn:last-child { border-right: none; }
+    .tab-btn:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+    .tab-btn.active { color: var(--accent-bright); }
+    .tab-btn.active::after {
+      content: '';
+      position: absolute;
+      left: 12px; right: 12px; bottom: 0;
+      height: 3px;
+      background: var(--accent);
+    }
+
+    /* ════════════════════════════════════════════════════════════ */
+    /*  SPECIAL WARRIOR — HUD theme                                 */
+    /*  Unique design: no plate, no rivets, no tape. HUD frames,    */
+    /*  scan-line, terminal section titles, corner brackets.        */
+    /* ════════════════════════════════════════════════════════════ */
+    body.theme-warrior {
+      --bg: #06090c;
+      --metal: #0c1116;
+      --metal-light: #131c24;
+      --metal-edge: #1f3140;
+      --rivet: #2e404e;
+      --rust: #1f4a5a;
+      --rust-light: #2e6878;
+      --accent: #00d4c4;
+      --accent-bright: #5cf5ec;
+      --text: #b4ccd8;
+      --text-dim: #586d7a;
+      --text-bright: #e6f4f8;
+      --danger: #ff4f50;
+      background-image:
+        repeating-linear-gradient(0deg, rgba(0,212,196,0.025) 0px, rgba(0,212,196,0.025) 1px, transparent 1px, transparent 3px);
+      background-attachment: fixed;
+    }
+
+    /* Logo swap (white SPECIAL WARRIOR logo replaces armor) */
+    .logo-warrior { display: none; }
+    body.theme-warrior .logo-armor { display: none; }
+    body.theme-warrior .logo-warrior {
+      display: block;
+      width: 110px;
+      height: auto;
+      margin: 0;
+      filter: drop-shadow(0 0 12px rgba(0,212,196,0.35)) drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+      position: relative;
+      z-index: 2;
+    }
+    @media (min-width: 1024px) {
+      body.theme-warrior .logo-warrior { width: 130px; }
+    }
+
+    /* Strip armor decorations: plaque, rivets, striped tape */
+    body.theme-warrior .logo-plate {
+      padding: 16px 24px;
+      margin-bottom: 0;
+    }
+    /* Outer crosshair extensions (4 short sticks reaching past the ring) */
+    body.theme-warrior .logo-plate::before {
+      content: '';
+      position: absolute;
+      inset: -24px;
+      pointer-events: none;
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      background:
+        linear-gradient(var(--accent), var(--accent)) 0 50% / 24px 2px no-repeat,
+        linear-gradient(var(--accent), var(--accent)) 100% 50% / 24px 2px no-repeat,
+        linear-gradient(var(--accent), var(--accent)) 50% 0 / 2px 24px no-repeat,
+        linear-gradient(var(--accent), var(--accent)) 50% 100% / 2px 24px no-repeat;
+    }
+    /* Small N/E/S/W tick marks just inside the ring */
+    body.theme-warrior .logo-plate::after {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      pointer-events: none;
+      border: none;
+      border-radius: 50%;
+      box-shadow: none;
+      background:
+        linear-gradient(var(--accent-bright), var(--accent-bright)) 0 50% / 8px 2px no-repeat,
+        linear-gradient(var(--accent-bright), var(--accent-bright)) 100% 50% / 8px 2px no-repeat,
+        linear-gradient(var(--accent-bright), var(--accent-bright)) 50% 0 / 2px 8px no-repeat,
+        linear-gradient(var(--accent-bright), var(--accent-bright)) 50% 100% / 2px 8px no-repeat;
+    }
+
+    /* Hero — clean HUD canvas with animated scan-line top, target-frame around logo */
+    body.theme-warrior .hero {
+      background: linear-gradient(180deg, #080c11 0%, var(--bg) 100%);
+      padding-top: 36px;
+      overflow: hidden;
+    }
+    body.theme-warrior .hero::before {
+      height: 2px;
+      background: linear-gradient(90deg,
+        transparent 0%, transparent 35%,
+        var(--accent-bright) 45%, var(--accent) 55%,
+        transparent 65%, transparent 100%);
+      background-size: 200% 100%;
+      background-repeat: no-repeat;
+      animation: hud-scan 4s linear infinite;
+      opacity: 0.85;
+    }
+    @keyframes hud-scan {
+      0%   { background-position: -100% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    /* Scope reticle around logo (replaces armor plate) */
+    body.theme-warrior .logo-plate {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 200px;
+      height: 200px;
+      padding: 0;
+      border: 1.5px solid var(--accent);
+      border-radius: 50%;
+      /* inner cross segments (22% from each edge → 28px gap around center for the logo) */
+      background:
+        linear-gradient(var(--accent), var(--accent)) 8% 50% / 22% 2px no-repeat,
+        linear-gradient(var(--accent), var(--accent)) 92% 50% / 22% 2px no-repeat,
+        linear-gradient(var(--accent), var(--accent)) 50% 8% / 2px 22% no-repeat,
+        linear-gradient(var(--accent), var(--accent)) 50% 92% / 2px 22% no-repeat,
+        radial-gradient(circle at center, transparent 0 53%, rgba(0,212,196,0.45) 53.2% 54%, transparent 54.2% 100%);
+      box-shadow:
+        0 0 28px rgba(0,212,196,0.22),
+        inset 0 0 32px rgba(0,212,196,0.10);
+      animation: hud-reticle-pulse 4s ease-in-out infinite;
+    }
+    @media (min-width: 1024px) {
+      body.theme-warrior .logo-plate { width: 240px; height: 240px; }
+    }
+    @keyframes hud-reticle-pulse {
+      0%, 100% { box-shadow: 0 0 28px rgba(0,212,196,0.22), inset 0 0 32px rgba(0,212,196,0.10); }
+      50%      { box-shadow: 0 0 42px rgba(0,212,196,0.40), inset 0 0 40px rgba(0,212,196,0.18); }
+    }
+    /* HUD label above logo "[ TGT_01 // SPECIAL_WARRIOR ]" */
+    body.theme-warrior .hero::after {
+      content: '[ TGT_01 \\\\ SPECIAL_WARRIOR \\\\ STATUS: READY ]' !important;
+      position: absolute;
+      top: 14px; left: 50%;
+      transform: translateX(-50%);
+      right: auto !important; bottom: auto !important;
+      font-family: 'Courier New', ui-monospace, monospace !important;
+      font-size: 10px !important;
+      letter-spacing: 2px !important;
+      color: var(--accent) !important;
+      opacity: 0.9 !important;
+      white-space: nowrap;
+      padding: 2px 10px;
+      border: 1px solid rgba(0,212,196,0.4);
+      background: rgba(6,9,12,0.85);
+    }
+
+    /* Form tabs — HUD style in warrior mode */
+    body.theme-warrior .form-tabs {
+      background: rgba(6,9,12,0.92);
+      border-bottom: 1px solid var(--accent);
+      box-shadow: 0 0 18px rgba(0,212,196,0.12), 0 2px 8px rgba(0,0,0,0.6);
+    }
+
+    /* Section title — terminal command style */
+    body.theme-warrior .section-title {
+      color: var(--accent);
+      font-family: 'Courier New', ui-monospace, monospace;
+      font-weight: 700;
+    }
+    body.theme-warrior .section-title::before {
+      content: '> ';
+      color: var(--accent);
+    }
+    body.theme-warrior .section-title::after {
+      background: linear-gradient(90deg, var(--accent), transparent);
+      opacity: 0.5;
+    }
+
+    /* Delivery section, order-item, oi-preview — HUD panel with 4 corner brackets */
+    body.theme-warrior .delivery-section,
+    body.theme-warrior .order-item {
+      background: linear-gradient(180deg, var(--metal) 0%, #060a0e 100%);
+      border: 1px solid var(--metal-edge);
+      border-radius: 0;
+      position: relative;
+      box-shadow: inset 0 0 0 1px rgba(0,212,196,0.05), 0 4px 18px rgba(0,0,0,0.55);
+    }
+    body.theme-warrior .order-item::before {
+      background: none;
+    }
+    body.theme-warrior .delivery-section::before,
+    body.theme-warrior .delivery-section::after,
+    body.theme-warrior .order-item::before,
+    body.theme-warrior .order-item::after {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      pointer-events: none;
+      background:
+        linear-gradient(var(--accent), var(--accent)) top left / 14px 2px no-repeat,
+        linear-gradient(var(--accent), var(--accent)) top left / 2px 14px no-repeat;
+    }
+    body.theme-warrior .delivery-section::before,
+    body.theme-warrior .order-item::before {
+      top: -3px; left: -3px;
+    }
+    body.theme-warrior .delivery-section::after,
+    body.theme-warrior .order-item::after {
+      bottom: -3px; right: -3px;
+      background:
+        linear-gradient(var(--accent), var(--accent)) bottom right / 14px 2px no-repeat,
+        linear-gradient(var(--accent), var(--accent)) bottom right / 2px 14px no-repeat;
+    }
+    body.theme-warrior .oi-preview {
+      background: linear-gradient(180deg, var(--metal) 0%, #060a0e 100%);
+      border: 1px solid var(--metal-edge);
+      border-radius: 0;
+    }
+    body.theme-warrior .order-item-header {
+      font-family: 'Courier New', ui-monospace, monospace;
+      border-bottom-color: rgba(0,212,196,0.25);
+    }
+
+    /* Inputs / textarea — terminal field */
+    body.theme-warrior input,
+    body.theme-warrior textarea,
+    body.theme-warrior select {
+      background-color: rgba(0,0,0,0.55);
+      border: 1px solid var(--metal-edge);
+      border-radius: 0;
+      color: var(--text-bright);
+      font-family: 'Courier New', ui-monospace, monospace;
+    }
+    body.theme-warrior input:focus,
+    body.theme-warrior textarea:focus,
+    body.theme-warrior select:focus {
+      border-color: var(--accent);
+      outline: none;
+      box-shadow: 0 0 0 1px var(--accent), 0 0 14px rgba(0,212,196,0.22);
+    }
+    body.theme-warrior select {
+      background-image:
+        linear-gradient(135deg, transparent 50%, rgba(0,212,196,0.18) 50%),
+        linear-gradient(180deg, rgba(0,212,196,0.06) 0%, transparent 40%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%2300d4c4' d='M0 0l6 8 6-8z'/%3E%3C/svg%3E");
+    }
+    body.theme-warrior select option {
+      background: #06090c;
+      color: var(--text-bright);
+    }
+    body.theme-warrior select option:checked { background: var(--accent); color: #001a17; }
+
+    /* Color/Size buttons — angular HUD chips */
+    body.theme-warrior .color-btn,
+    body.theme-warrior .size-btn {
+      background: rgba(0,212,196,0.04);
+      border: 1px solid var(--metal-edge);
+      border-radius: 0;
+      color: var(--text);
+    }
+    body.theme-warrior .color-btn:hover,
+    body.theme-warrior .size-btn:hover { border-color: var(--accent); }
+    body.theme-warrior .size-btn.active,
+    body.theme-warrior .color-btn.active {
+      color: #001a17;
+      background: var(--accent);
+      border-color: var(--accent-bright);
+      box-shadow: 0 0 12px rgba(0,212,196,0.55);
+    }
+
+    /* File boxes — dashed targeting frame; warrior needs only viz */
+    body.theme-warrior .file-box {
+      background: rgba(0,212,196,0.03);
+      border: 1px dashed var(--accent);
+      border-radius: 0;
+      color: var(--text-dim);
+    }
+    body.theme-warrior .file-box:hover,
+    body.theme-warrior .file-box.has-files {
+      border-color: var(--accent-bright);
+      box-shadow: inset 0 0 18px rgba(0,212,196,0.08);
+    }
+    body.theme-warrior #globalPrintBox { display: none; }
+
+    /* Add-item button — angular tactical */
+    body.theme-warrior .add-item-btn {
+      background: transparent;
+      border: 1px dashed var(--accent);
+      border-radius: 0;
+      color: var(--accent);
+      font-family: 'Courier New', ui-monospace, monospace;
+      letter-spacing: 3px;
+    }
+    body.theme-warrior .add-item-btn:hover {
+      background: rgba(0,212,196,0.06);
+      color: var(--accent-bright);
+    }
+
+    /* Submit buttons — TRANSMIT style, hexagonal cut corners */
+    body.theme-warrior .fallback-submit,
+    body.theme-warrior .desktop-submit {
+      background: linear-gradient(180deg, var(--accent-bright) 0%, var(--accent) 100%);
+      color: #001a17;
+      font-family: 'Russo One', sans-serif;
+      letter-spacing: 6px;
+      border-radius: 0;
+      clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+      box-shadow: 0 0 28px rgba(0,212,196,0.35);
+    }
+    body.theme-warrior .new-order-btn {
+      background: var(--accent);
+      color: #001a17;
+      border-radius: 0;
+      clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    }
+
+    /* Urgent row — HUD alert toggle */
+    body.theme-warrior .urgent-row {
+      background: rgba(255,79,80,0.06);
+      border: 1px solid rgba(255,79,80,0.4);
+      border-radius: 0;
+    }
+    body.theme-warrior .urgent-check {
+      background: rgba(0,0,0,0.6);
+      border: 1px solid var(--metal-edge);
+      border-radius: 0;
+    }
+    body.theme-warrior .urgent-row.active {
+      background: rgba(255,79,80,0.12);
+      border-color: var(--danger);
+      box-shadow: 0 0 14px rgba(255,79,80,0.2);
+    }
+
+    /* Desktop sidebar telemetry */
+    @media (min-width: 1024px) {
+      body.theme-warrior::before {
+        background:
+          radial-gradient(ellipse at 15% 20%, rgba(0,212,196,0.08), transparent 45%),
+          radial-gradient(ellipse at 85% 75%, rgba(92,245,236,0.05), transparent 45%),
+          linear-gradient(0deg, transparent 0%, rgba(0,0,0,0.5) 100%);
+      }
+      body.theme-warrior .content {
+        background: linear-gradient(180deg, rgba(6,9,12,0.65), rgba(6,9,12,0.25) 360px, transparent 640px);
+        border-left-color: var(--metal-edge);
+        border-right-color: var(--metal-edge);
+      }
+      body.theme-warrior .hero {
+        border-left-color: var(--metal-edge);
+        border-right-color: var(--metal-edge);
+      }
+      /* Already overridden above — but desktop tagline position differs */
+      body.theme-warrior .hero::after {
+        position: absolute;
+        top: 14px; left: 50%;
+        transform: translateX(-50%);
+      }
+      body.theme-warrior .case-plate {
+        background: linear-gradient(180deg, var(--metal) 0%, #060a0e 100%);
+        border: 1px solid var(--metal-edge);
+        border-radius: 0;
+        box-shadow:
+          inset 0 0 0 1px rgba(0,212,196,0.08),
+          0 0 18px rgba(0,212,196,0.06),
+          0 4px 12px rgba(0,0,0,0.5);
+      }
+      body.theme-warrior .case-plate::before {
+        content: '';
+        position: absolute;
+        top: -3px; left: -3px;
+        width: 14px; height: 14px;
+        background:
+          linear-gradient(var(--accent), var(--accent)) top left / 14px 2px no-repeat,
+          linear-gradient(var(--accent), var(--accent)) top left / 2px 14px no-repeat;
+        opacity: 1;
+      }
+      body.theme-warrior .case-plate::after {
+        content: '';
+        position: absolute;
+        bottom: -3px; right: -3px;
+        width: 14px; height: 14px;
+        background:
+          linear-gradient(var(--accent), var(--accent)) bottom right / 14px 2px no-repeat,
+          linear-gradient(var(--accent), var(--accent)) bottom right / 2px 14px no-repeat;
+      }
+      body.theme-warrior .case-plate-row .lbl {
+        color: var(--text-dim);
+        font-family: 'Courier New', ui-monospace, monospace;
+      }
+      body.theme-warrior .case-plate-row .val {
+        color: var(--accent-bright);
+        font-family: 'Courier New', ui-monospace, monospace;
+      }
+      body.theme-warrior h1 {
+        color: var(--accent-bright);
+        font-family: 'Russo One', sans-serif;
+        letter-spacing: 12px;
+      }
+      body.theme-warrior h1::after {
+        background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      }
+    }
+
+    /* ── Warrior submit animation (Target Lock) ── */
+    .anim-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      background: rgba(2,5,8,0.97);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 28px;
+      color: var(--accent);
+      font-family: 'Courier New', ui-monospace, monospace;
+      letter-spacing: 2px;
+    }
+    .anim-overlay.active { display: flex; }
+    .anim-overlay::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, rgba(0,212,196,0.04) 0 1px, transparent 1px 3px);
+      pointer-events: none;
+    }
+
+    /* TARGET LOCK */
+    .anim-lock-crosshair {
+      width: 220px; height: 220px;
+      position: relative;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 32px rgba(0,212,196,0.4), inset 0 0 32px rgba(0,212,196,0.15);
+      animation: lock-zoom 0.6s ease-out, lock-pulse 1.2s ease-in-out 0.6s infinite;
+    }
+    @keyframes lock-zoom {
+      0% { transform: scale(2.5); opacity: 0; border-color: rgba(0,212,196,0.2); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes lock-pulse {
+      0%, 100% { box-shadow: 0 0 32px rgba(0,212,196,0.4), inset 0 0 32px rgba(0,212,196,0.15); }
+      50% { box-shadow: 0 0 48px rgba(0,212,196,0.7), inset 0 0 40px rgba(0,212,196,0.25); }
+    }
+    .anim-lock-line {
+      position: absolute;
+      background: var(--accent-bright);
+      box-shadow: 0 0 8px rgba(0,212,196,0.8);
+    }
+    .anim-lock-line-h {
+      top: 50%; left: -40px; right: -40px;
+      height: 2px;
+      transform: translateY(-50%) scaleX(0);
+      animation: lock-line-x 0.4s ease-out 0.5s forwards;
+    }
+    .anim-lock-line-v {
+      left: 50%; top: -40px; bottom: -40px;
+      width: 2px;
+      transform: translateX(-50%) scaleY(0);
+      animation: lock-line-y 0.4s ease-out 0.5s forwards;
+    }
+    @keyframes lock-line-x { to { transform: translateY(-50%) scaleX(1); } }
+    @keyframes lock-line-y { to { transform: translateX(-50%) scaleY(1); } }
+    .anim-lock-center-dot {
+      position: absolute;
+      top: 50%; left: 50%;
+      width: 8px; height: 8px;
+      background: var(--accent-bright);
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      animation: lock-dot 0.3s ease-out 0.9s forwards;
+      box-shadow: 0 0 16px var(--accent-bright);
+    }
+    @keyframes lock-dot { to { transform: translate(-50%, -50%) scale(1); } }
+    .anim-lock-log {
+      width: min(340px, 90vw);
+      min-height: 130px;
+      font-size: 12px;
+      white-space: pre;
+      color: var(--text-bright);
+      text-align: left;
+      line-height: 1.6;
+    }
+    .anim-lock-stamp {
+      font-family: 'Russo One', sans-serif;
+      font-size: 26px;
+      letter-spacing: 10px;
+      color: var(--accent-bright);
+      text-shadow: 0 0 24px rgba(0,212,196,0.9);
+      padding: 12px 28px;
+      border: 2px solid var(--accent);
+      opacity: 0;
+      transform: scale(1.6);
+      clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+    }
+    .anim-overlay.complete .anim-lock-stamp {
+      animation: stamp-in 0.4s cubic-bezier(0.3,1.8,0.6,1) forwards;
+    }
+    @keyframes stamp-in {
+      0% { opacity: 0; transform: scale(1.8); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* New Order button (revealed after stamp) */
+    .anim-lock-new-btn {
+      font-family: 'Russo One', sans-serif;
+      font-size: 13px;
+      letter-spacing: 4px;
+      color: #001a17;
+      background: var(--accent);
+      border: none;
+      padding: 12px 28px;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(8px);
+      clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+      box-shadow: 0 0 18px rgba(0,212,196,0.5);
+    }
+    .anim-overlay.complete .anim-lock-new-btn {
+      animation: stamp-in 0.4s ease-out 0.5s forwards;
+    }
+    .anim-lock-new-btn:hover {
+      background: var(--accent-bright);
+      box-shadow: 0 0 28px rgba(0,212,196,0.75);
+    }
   </style>
 </head>
-<body>
+<body class="theme-armor">
+
+<nav class="form-tabs" id="formTabs" role="tablist" aria-label="Перемикач форм клієнтів">
+  <button type="button" class="tab-btn active" data-form="armor" role="tab" aria-selected="true" aria-controls="orderForm">Modern Armor</button>
+  <button type="button" class="tab-btn" data-form="warrior" role="tab" aria-selected="false" aria-controls="orderForm">Special Warrior</button>
+</nav>
+
+<div class="anim-overlay" id="animLock">
+  <div class="anim-lock-crosshair">
+    <div class="anim-lock-line anim-lock-line-h"></div>
+    <div class="anim-lock-line anim-lock-line-v"></div>
+    <div class="anim-lock-center-dot"></div>
+  </div>
+  <pre class="anim-lock-log" id="animLockLog"></pre>
+  <div class="anim-lock-stamp">TRANSMITTED</div>
+  <button type="button" class="anim-lock-new-btn" id="animLockNewBtn">Нове замовлення</button>
+</div>
+
+
+<div id="orderForm" role="tabpanel">
 
 <div class="hero">
   <div class="logo-plate">
-    <img src="logo.svg" alt="Modern Armor">
+    <img class="logo-armor" src="logo.svg" alt="Modern Armor">
+    <img class="logo-warrior" src="%D0%9B%D0%BE%D0%B3%D0%BE%D1%82%D0%B8%D0%BF%20specialwarrior_shop.svg" alt="Special Warrior">
   </div>
 </div>
 
@@ -1262,6 +1840,8 @@
 </div>
 
 <button class="fallback-submit" id="fallbackSubmit" onclick="submitOrder()">Відправити замовлення</button>
+
+</div>
 
 <script>
 const tg = window.Telegram?.WebApp || {};
@@ -1526,6 +2106,7 @@ function getProductPhoto(type, color) {
 let items = [];
 let globalVizFiles = [];
 let globalPrintFiles = [];
+let currentForm = 'armor';
 const thumbCache = new WeakMap(); // file -> dataURL (80x80 jpeg)
 
 function makeThumb(file) {
@@ -1825,7 +2406,7 @@ function validate() {
   const comment = document.getElementById('orderComment').value.trim();
 
   if (!globalVizFiles.length || globalVizFiles.some(f => !f.size)) errors.push('Додайте візуалізацію');
-  if (!globalPrintFiles.length || globalPrintFiles.some(f => !f.size)) errors.push('Додайте файли для друку');
+  if (currentForm !== 'warrior' && (!globalPrintFiles.length || globalPrintFiles.some(f => !f.size))) errors.push('Додайте файли для друку');
   if (!name) errors.push('Вкажіть ПІБ отримувача');
   if (phoneDigits.length !== 12) errors.push('Введіть повний номер телефону');
   if (!selectedCity) errors.push('Оберіть місто');
@@ -1843,8 +2424,9 @@ function getFormData() {
   const phone = document.getElementById('recipientPhone').value.trim();
   const comment = document.getElementById('orderComment').value.trim();
 
+  const isWarrior = currentForm === 'warrior';
   const orderData = {
-    source_id: 31,
+    source_id: isWarrior ? 43 : 31,
     manager_id: 37,
     buyer: {
       full_name: fullName,
@@ -1872,8 +2454,10 @@ function getFormData() {
     buyer_comment: comment,
     ordered_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19),
   };
+  if (isWarrior) orderData.company_id = 4550;
 
   formData.append('order', JSON.stringify(orderData));
+  formData.append('client', isWarrior ? 'warrior' : 'modern_armor');
   formData.append('urgent', document.getElementById('urgentCheck').checked ? 'true' : 'false');
   formData.append('tg_user_id', tg.initDataUnsafe?.user?.id || '7044843745');
   globalVizFiles.forEach((f, i) => formData.append(`item_viz_${i}`, f));
@@ -1907,11 +2491,37 @@ function updateCasePlate() {
 }
 
 let isSubmitting = false;
+const WEBHOOK_URL = 'https://primary-production-eeb3.up.railway.app/webhook/png-order';
 async function submitOrder() {
   if (isSubmitting) return;
   if (!validate()) return;
+  if (currentForm === 'warrior') {
+    isSubmitting = true;
+    playWarriorLock();
+    const animMinDelay = new Promise(r => setTimeout(r, 2200));
+    try {
+      const formData = getFormData();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
+      let res;
+      try {
+        res = await fetch(WEBHOOK_URL, { method: 'POST', body: formData, signal: controller.signal });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      await animMinDelay;
+      document.getElementById('animLock').classList.add('complete');
+    } catch (err) {
+      clearWarriorAnimTimers();
+      document.getElementById('animLock').classList.remove('active');
+      alert('Не вдалося відправити: ' + err.message + '. Перевірте інтернет і спробуйте ще раз.');
+    } finally {
+      isSubmitting = false;
+    }
+    return;
+  }
   isSubmitting = true;
-  const WEBHOOK_URL = 'https://primary-production-eeb3.up.railway.app/webhook/png-order';
   const desktopBtn = document.getElementById('desktopSubmit');
   const fallbackBtn = document.getElementById('fallbackSubmit');
   if (desktopBtn) { desktopBtn.disabled = true; desktopBtn.textContent = 'Завантаження файлів…'; }
@@ -1997,6 +2607,93 @@ function toggleUrgent() {
   cb.checked = !cb.checked;
   row.classList.toggle('active', cb.checked);
   if (typeof updateCasePlate === 'function') updateCasePlate();
+}
+
+// ── Form switcher (Modern Armor / Special Warrior) ──
+function applyTheme(name) {
+  document.body.classList.remove('theme-armor', 'theme-warrior');
+  document.body.classList.add('theme-' + name);
+  document.title = name === 'warrior'
+    ? 'Special Warrior — Замовлення на Друк'
+    : 'Modern Armor — Замовлення на Друк';
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const active = b.dataset.form === name;
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+}
+function switchForm(name) {
+  if (name !== 'armor' && name !== 'warrior') return;
+  if (name === currentForm) return;
+  currentForm = name;
+  try { localStorage.setItem('png_currentForm', name); } catch (e) {}
+  applyTheme(name);
+}
+
+// ── Warrior submit: Target Lock animation ──
+const WARRIOR_LOCK_LOG = [
+  [800, '> INITIALIZING SECURE CHANNEL...'],
+  [1300, '> ENCRYPTING PAYLOAD [AES-256]'],
+  [1700, '> UPLOADING [██░░░░░░] 25%'],
+  [2100, '> UPLOADING [████░░░░] 50%'],
+  [2500, '> UPLOADING [██████░░] 75%'],
+  [2900, '> UPLOADING [████████] 100%'],
+  [3100, '> PACKET_DELIVERED ✓']
+];
+const WARRIOR_ANIM_TIMERS = [];
+function clearWarriorAnimTimers() {
+  while (WARRIOR_ANIM_TIMERS.length) clearTimeout(WARRIOR_ANIM_TIMERS.pop());
+}
+function playWarriorLock() {
+  const o = document.getElementById('animLock');
+  const log = document.getElementById('animLockLog');
+  clearWarriorAnimTimers();
+  log.textContent = '';
+  o.classList.remove('active', 'complete');
+  void o.offsetWidth; // restart CSS animations
+  o.classList.add('active');
+  WARRIOR_LOCK_LOG.forEach(([t, line]) => {
+    WARRIOR_ANIM_TIMERS.push(setTimeout(() => { log.textContent += line + '\n'; }, t));
+  });
+}
+function closeWarriorLockAndReset() {
+  document.getElementById('animLock').classList.remove('active', 'complete');
+  clearWarriorAnimTimers();
+  items = [];
+  globalVizFiles = [];
+  globalPrintFiles = [];
+  if (typeof renderGlobalFileBox === 'function') {
+    renderGlobalFileBox('viz');
+    renderGlobalFileBox('print');
+  }
+  addItem();
+  document.getElementById('recipientName').value = '';
+  if (typeof phoneInput !== 'undefined') phoneInput.value = '+38 ';
+  if (typeof clearCity === 'function') clearCity();
+  if (typeof clearWarehouse === 'function') clearWarehouse();
+  document.getElementById('orderComment').value = '';
+  document.getElementById('urgentCheck').checked = false;
+  document.getElementById('urgentRow').classList.remove('active');
+  const fb = document.getElementById('fallbackSubmit');
+  if (fb) fb.style.display = 'block';
+  window.scrollTo(0, 0);
+}
+
+if (isTg) {
+  const tabs = document.getElementById('formTabs');
+  if (tabs) tabs.style.display = 'none';
+  currentForm = 'armor';
+  applyTheme('armor');
+} else {
+  let saved = 'armor';
+  try { saved = localStorage.getItem('png_currentForm') || 'armor'; } catch (e) {}
+  if (saved !== 'armor' && saved !== 'warrior') saved = 'armor';
+  currentForm = saved;
+  applyTheme(saved);
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.addEventListener('click', () => switchForm(b.dataset.form));
+  });
+  document.getElementById('animLockNewBtn').addEventListener('click', closeWarriorLockAndReset);
 }
 
 addItem();
