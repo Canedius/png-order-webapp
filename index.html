@@ -1222,16 +1222,18 @@
       background: var(--accent);
     }
     .tab-btn .tab-logo {
-      height: 23px;
+      height: 28px;
       width: auto;
-      flex-shrink: 0;
+      max-width: 75%;
+      flex-shrink: 1;
       filter: brightness(0) invert(1);
       opacity: 0.55;
       transition: opacity 0.2s, filter 0.2s;
     }
-    .tab-btn[data-form="armor"] .tab-logo { height: 31px; }
+    .tab-btn[data-form="armor"] .tab-logo { height: 31px; max-width: none; }
+    .tab-btn[data-form="warrior"] span { display: none; }
     @media (min-width: 768px) {
-      .tab-btn .tab-logo { height: 29px; }
+      .tab-btn .tab-logo { height: 34px; }
       .tab-btn[data-form="armor"] .tab-logo { height: 39px; }
     }
     .tab-btn:hover .tab-logo { opacity: 0.85; }
