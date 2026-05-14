@@ -2120,7 +2120,7 @@ const COLOR_CODE = {
 };
 
 function buildSku(type, color, size) {
-  if (type === 'легкі штани Топ тайм') return `wjh072_DBL_${size}`;
+  if (type === 'легкі штани Топ тайм') return `awjh072_DBL_${size}`;
   return (SKU_PREFIX[type] || '') + (COLOR_CODE[color] || '') + (SKU_INFIX[type] || '') + size;
 }
 
