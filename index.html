@@ -487,6 +487,34 @@
       z-index: 1;
     }
 
+    /* Per-item file box (Modern Armor only) — нижче полів картки товару, видно після вибору типу */
+    .oi-files-row {
+      display: none;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--metal-edge);
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .oi-files-row.visible { display: flex; }
+    .oi-files-row .oi-files-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      flex: 1;
+      min-width: 120px;
+    }
+    .oi-files-row .file-box {
+      width: 110px;
+      height: 110px;
+    }
+    /* Armor: глобальний "print" бокс зайвий (тепер per-item файли для друку) */
+    body.theme-armor #globalPrintBox { display: none; }
+    /* Warrior: ховаємо per-item file box (тепер тільки global) */
+    body.theme-warrior .oi-files-row { display: none !important; }
+
     .file-upload-area {
       border: 2px dashed var(--metal-edge);
       border-radius: 6px;
@@ -1231,7 +1259,8 @@
       transition: opacity 0.2s, filter 0.2s;
     }
     .tab-btn[data-form="armor"] .tab-logo { height: 31px; max-width: none; }
-    .tab-btn[data-form="warrior"] span { display: none; }
+    /* Warrior: текст зліва, логотип справа */
+    .tab-btn[data-form="warrior"] { flex-direction: row-reverse; }
     @media (min-width: 768px) {
       .tab-btn .tab-logo { height: 34px; }
       .tab-btn[data-form="armor"] .tab-logo { height: 39px; }
@@ -1811,7 +1840,7 @@
       <div class="delivery-section" style="display:flex;gap:12px;justify-content:center;">
         <div class="file-box" id="globalVizBox" onclick="if(!event.target.closest('.thumb-remove'))this.querySelector('input').click()">
           <div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
-          <div class="text">Візуалі-<br>зація</div>
+          <div class="text">Візуалі-<br>зації</div>
           <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg"
             onchange="addGlobalFiles('viz', this)" onclick="event.stopPropagation()">
         </div>
@@ -2159,28 +2188,6 @@ function makeThumb(file) {
   });
 }
 
-function getThumbsHtml(files, itemId, field) {
-  if (!files || !files.length) return '';
-  const n = Math.min(files.length, 5);
-  const thumbItems = files.map((file, idx) => {
-    const removeBtn = `<button class="thumb-remove" onclick="event.stopPropagation();removeFile(${itemId},'${field}',${idx})" type="button">✕</button>`;
-    if (file.type && file.type.startsWith('image/')) {
-      const src = thumbCache.get(file) || '';
-      return `<div class="thumb-item">${removeBtn}${src ? `<img src="${src}" alt="">` : `<span class="ext-label">...</span>`}</div>`;
-    }
-    const ext = file.name?.split('.').pop()?.toUpperCase() || '?';
-    return `<div class="thumb-item">${removeBtn}<span class="ext-label">.${ext}</span></div>`;
-  }).join('');
-  return `<div class="thumbs-grid n${n}">${thumbItems}</div>`;
-}
-
-function removeFile(itemId, field, idx) {
-  const item = items.find(i => i.id === itemId);
-  if (!item) return;
-  item[field].splice(idx, 1);
-  renderFileBox(itemId, field);
-}
-
 function removeGlobalFile(field, idx) {
   if (field === 'viz') globalVizFiles.splice(idx, 1);
   else globalPrintFiles.splice(idx, 1);
@@ -2210,9 +2217,9 @@ function renderGlobalFileBox(field) {
   const hasFiles = files.length > 0;
   box.className = 'file-box' + (hasFiles ? ' has-files' : '');
   box.innerHTML = hasFiles
-    ? `${getGlobalThumbsHtml(files, field)}<div class="overlay-label">${field === 'viz' ? 'Візуалізація' : 'Для друку'}</div>`
+    ? `${getGlobalThumbsHtml(files, field)}<div class="overlay-label">${field === 'viz' ? 'Візуалізації' : 'Для друку'}</div>`
     : field === 'viz'
-      ? `<div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div><div class="text">Візуалі-<br>зація</div>`
+      ? `<div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div><div class="text">Візуалі-<br>зації</div>`
       : `<div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div class="text">Файли<br>для друку</div>`;
   box.appendChild(inputEl);
 }
@@ -2231,7 +2238,7 @@ async function addGlobalFiles(field, input) {
 
 function addItem() {
   const id = Date.now();
-  items.push({ id, type: '', color: 'Чорний', size: '', qty: 1, customization: '' });
+  items.push({ id, type: '', color: 'Чорний', size: '', qty: 1, customization: '', files: [] });
   renderItems();
 }
 
@@ -2296,9 +2303,20 @@ function renderItems() {
             : `<div class="oi-preview-empty"><div class="oi-preview-icon">👕</div><div class="oi-preview-hint">Оберіть тип і колір</div></div>`}
         </div>
       </div>
+
+      <div class="oi-files-row ${item.type ? 'visible' : ''}">
+        <div class="oi-files-label">Файли для друку (для цього товару)</div>
+        <div class="file-box oi-file-box" onclick="if(!event.target.closest('.thumb-remove'))this.querySelector('input').click()">
+          <div class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+          <div class="text">Файли<br>для друку</div>
+          <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg,.ai,.cdr,.eps,.psd"
+            onchange="addItemFiles(${item.id}, this)" onclick="event.stopPropagation()">
+        </div>
+      </div>
     </div>
   `;
   }).join('');
+  items.forEach(i => renderItemFileBox(i.id));
 }
 
 function updateItem(id, field, value) {
@@ -2373,39 +2391,60 @@ function updatePreview(itemId) {
   }
 }
 
-function renderFileBox(itemId, field) {
+function renderItemFileBox(itemId) {
   const item = items.find(i => i.id === itemId);
   if (!item) return;
   const itemEl = document.querySelector(`#items-container [data-id="${itemId}"]`);
   if (!itemEl) return;
-  const boxes = itemEl.querySelectorAll('.file-box');
-  const box = boxes[field === 'vizFiles' ? 0 : 1];
+  const box = itemEl.querySelector('.oi-file-box');
   if (!box) return;
   const inputEl = box.querySelector('input[type="file"]');
-  const files = item[field] || [];
+  const files = item.files || [];
   const hasFiles = files.length > 0;
-  box.className = 'file-box' + (hasFiles ? ' has-files' : '');
+  box.className = 'file-box oi-file-box' + (hasFiles ? ' has-files' : '');
   box.innerHTML = hasFiles
-    ? `${getThumbsHtml(files, item.id, field)}<div class="overlay-label">${field === 'vizFiles' ? 'Візуалізація' : 'Для друку'}</div>`
-    : `<div class="icon">${field === 'vizFiles' ? '🖼' : '🖨'}</div><div class="text">${field === 'vizFiles' ? 'Візуалі-<br>зація' : 'Файли<br>для друку'}</div>`;
+    ? `${getItemThumbsHtml(files, item.id)}<div class="overlay-label">Для друку</div>`
+    : `<div class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div class="text">Файли<br>для друку</div>`;
   box.appendChild(inputEl);
 }
 
-async function addFiles(itemId, field, input) {
+function getItemThumbsHtml(files, itemId) {
+  if (!files || !files.length) return '';
+  const n = Math.min(files.length, 5);
+  const thumbItems = files.map((file, idx) => {
+    const removeBtn = `<button class="thumb-remove" onclick="event.stopPropagation();removeItemFile(${itemId},${idx})" type="button">✕</button>`;
+    if (file.type && file.type.startsWith('image/')) {
+      const src = thumbCache.get(file) || '';
+      return `<div class="thumb-item">${removeBtn}${src ? `<img src="${src}" alt="">` : `<span class="ext-label">...</span>`}</div>`;
+    }
+    const ext = file.name?.split('.').pop()?.toUpperCase() || '?';
+    return `<div class="thumb-item">${removeBtn}<span class="ext-label">.${ext}</span></div>`;
+  }).join('');
+  return `<div class="thumbs-grid n${n}">${thumbItems}</div>`;
+}
+
+function removeItemFile(itemId, idx) {
+  const item = items.find(i => i.id === itemId);
+  if (!item || !item.files) return;
+  item.files.splice(idx, 1);
+  renderItemFileBox(itemId);
+}
+
+async function addItemFiles(itemId, input) {
   const item = items.find(i => i.id === itemId);
   if (!item) return;
+  if (!item.files) item.files = [];
   const newFiles = [...input.files];
   input.value = '';
-  // Generate thumbnails first, then render once
   await Promise.all(newFiles.map(async file => {
     const thumb = await makeThumb(file);
     if (thumb) thumbCache.set(file, thumb);
-    item[field].push(file);
+    item.files.push(file);
   }));
-  renderFileBox(itemId, field);
+  renderItemFileBox(itemId);
 }
 
-// ── Paste from clipboard → globalVizFiles ──
+// ── Paste from clipboard → globalVizFiles (Візуалізації для KeyCRM) ──
 document.addEventListener('paste', async (e) => {
   const files = [...(e.clipboardData?.files || [])];
   if (!files.length) return;
@@ -2418,7 +2457,14 @@ document.addEventListener('paste', async (e) => {
   renderGlobalFileBox('viz');
 });
 
-function validate() {
+function tgConfirm(msg) {
+  return new Promise(resolve => {
+    if (isTg && tg.showConfirm) tg.showConfirm(msg, ok => resolve(!!ok));
+    else resolve(window.confirm(msg));
+  });
+}
+
+async function validate() {
   const errors = [];
 
   for (let i = 0; i < items.length; i++) {
@@ -2432,10 +2478,16 @@ function validate() {
 
   const name = document.getElementById('recipientName').value.trim();
   const phoneDigits = document.getElementById('recipientPhone').value.replace(/\D/g, '');
-  const comment = document.getElementById('orderComment').value.trim();
 
+  // Глобальні візуалки — обов'язкові для обох режимів (у KeyCRM)
   if (!globalVizFiles.length || globalVizFiles.some(f => !f.size)) errors.push('Додайте візуалізацію');
-  if (currentForm !== 'warrior' && (!globalPrintFiles.length || globalPrintFiles.some(f => !f.size))) errors.push('Додайте файли для друку');
+  if (currentForm === 'armor') {
+    // Per-item файли для друку (обов'язкові — хоча б 1 на замовлення)
+    const totalFiles = items.reduce((s, i) => s + (i.files?.length || 0), 0);
+    if (totalFiles === 0) errors.push('Додайте файли для друку хоча б до одного товару');
+    if (items.some(i => (i.files || []).some(f => !f.size))) errors.push('Один із файлів порожній');
+  }
+  // Warrior — print файли опціональні, як і раніше
   if (!name) errors.push('Вкажіть ПІБ отримувача');
   if (phoneDigits.length !== 12) errors.push('Введіть повний номер телефону');
   if (!selectedCity) errors.push('Оберіть місто');
@@ -2443,6 +2495,15 @@ function validate() {
   if (errors.length) {
     if (isTg) tg.showAlert(errors[0]); else alert(errors[0]);
     return false;
+  }
+
+  // Armor: warning якщо файлів для друку менше ніж товарів (товари ділять файли)
+  if (currentForm === 'armor') {
+    const totalFiles = items.reduce((s, i) => s + (i.files?.length || 0), 0);
+    if (totalFiles < items.length) {
+      const ok = await tgConfirm('У замовленні є товари з однаковими файлами для друку. Перевірте чи правильно прикріплені файли. Створити замовлення?');
+      if (!ok) return false;
+    }
   }
   return true;
 }
@@ -2489,8 +2550,22 @@ function getFormData() {
   formData.append('client', isWarrior ? 'warrior' : 'modern_armor');
   formData.append('urgent', document.getElementById('urgentCheck').checked ? 'true' : 'false');
   formData.append('tg_user_id', tg.initDataUnsafe?.user?.id || '7044843745');
+  // Visualisations (в KeyCRM як attachments) — глобальні для обох режимів
   globalVizFiles.forEach((f, i) => formData.append(`item_viz_${i}`, f));
-  globalPrintFiles.forEach((f, i) => formData.append(`item_print_${i}`, f));
+
+  if (isWarrior) {
+    // Warrior: global print files як раніше
+    globalPrintFiles.forEach((f, i) => formData.append(`item_print_${i}`, f));
+  } else {
+    // Armor: per-item файли для друку — у Drive з префіксом t{N}__ (для VBA mapping)
+    items.forEach((item, itemIdx) => {
+      (item.files || []).forEach((f, fileIdx) => {
+        const prefixedName = `t${itemIdx + 1}__${f.name}`;
+        const renamed = new File([f], prefixedName, { type: f.type });
+        formData.append(`item_print_${itemIdx}_${fileIdx}`, renamed);
+      });
+    });
+  }
   return formData;
 }
 
@@ -2523,7 +2598,7 @@ let isSubmitting = false;
 const WEBHOOK_URL = 'https://primary-production-eeb3.up.railway.app/webhook/png-order';
 async function submitOrder() {
   if (isSubmitting) return;
-  if (!validate()) return;
+  if (!(await validate())) return;
   if (currentForm === 'warrior') {
     isSubmitting = true;
     playWarriorLock();
