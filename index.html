@@ -2191,14 +2191,8 @@ const PRINT_SIZE_LABEL = {
   'A6': 'A6 (10×15)', 'A5': 'A5 (20×14)', 'A4': 'A4 (20×29)',
   'A3': 'A3 (40×29)', 'A2': 'A2 (58×40)'
 };
-// Combo (доп -20% на набір). Ключ — відсортовані розміри через '+'.
-const PRINT_COMBO_PRICE = {
-  'A4+A6':       190,
-  'A3+A6':       225,
-  'A4+A6+A6':    270,
-  'A3+A6+A6':    310,
-  'A2+A6':       290
-};
+// Combo: будь-які 2+ друки в замовленні = -20% на суму друків
+const PRINT_COMBO_DISCOUNT = 0.20;
 
 function buildPrintsList(items) {
   const prints = [];
@@ -2212,11 +2206,12 @@ function buildPrintsList(items) {
 function getOrderPrintCost(items) {
   const prints = buildPrintsList(items);
   const individualSum = prints.reduce((s, sz) => s + (PRINT_SIZE_PRICE[sz] || 0), 0);
-  const key = [...prints].sort().join('+');
-  if (PRINT_COMBO_PRICE[key] !== undefined) {
-    return { total: PRINT_COMBO_PRICE[key], combo: true, key, individualSum };
+  if (prints.length >= 2) {
+    const total = Math.round(individualSum * (1 - PRINT_COMBO_DISCOUNT));
+    const key = [...prints].sort().join('+');
+    return { total, combo: true, key, individualSum };
   }
-  return { total: individualSum, combo: false, key, individualSum };
+  return { total: individualSum, combo: false, key: '', individualSum };
 }
 
 const PHOTO_PREFIX = { ...SKU_PREFIX, 'Худі легкий': 'KUF001', 'легкі штани Топ тайм': null, 'Штани утеплені': null };
@@ -2594,7 +2589,12 @@ function getFormData() {
   const comment = document.getElementById('orderComment').value.trim();
 
   const isWarrior = currentForm === 'warrior';
-  const sendPrice = !isWarrior && !isTg;
+  const totalUnits = items.reduce((s, i) => s + (parseInt(i.qty) || 0), 0);
+  const isWholesale = totalUnits >= 5;
+  // armor+web: завжди шлемо properties (Розмір друку), але price/discount — тільки при тиражі <5
+  const sendProperties = !isWarrior && !isTg;
+  // При тиражі від 5 шт — оптовий прайс, менеджер прорахує вручну в KeyCRM
+  const sendPrice = sendProperties && !isWholesale;
   const isUrgent = document.getElementById('urgentCheck').checked;
   const urgentSurchargePerUnit = sendPrice && isUrgent ? 100 : 0;
   const cost = sendPrice ? getOrderPrintCost(items) : null;
@@ -2622,6 +2622,8 @@ function getFormData() {
       comment: i.customization || '',
       ...(sendPrice ? {
         price: (PRODUCT_BASE_PRICE[i.type] || 0) + (PRINT_SIZE_PRICE[i.printSize] || 0) + urgentSurchargePerUnit,
+      } : {}),
+      ...(sendProperties ? {
         properties: [{ name: 'Розмір друку', value: PRINT_SIZE_LABEL[i.printSize] || '' }]
       } : {})
     })),
@@ -2684,14 +2686,18 @@ function updateCasePlate() {
 
   const totalEl = document.getElementById('caseTotal');
   if (totalEl && currentForm === 'armor' && !isTg) {
-    const cost = getOrderPrintCost(items);
-    const productsSum = items.reduce((s, i) => s + (PRODUCT_BASE_PRICE[i.type] || 0) * (parseInt(i.qty) || 0), 0);
-    const urgentSurcharge = urgent ? 100 * unitsCount : 0;
-    const total = productsSum + cost.total + urgentSurcharge;
-    const markers = [];
-    if (cost.combo) markers.push(`combo ${cost.key}`);
-    if (urgent) markers.push(`+${urgentSurcharge}₴ термін`);
-    totalEl.textContent = `${total} ₴` + (markers.length ? ` (${markers.join(', ')})` : '');
+    if (unitsCount >= 5) {
+      totalEl.textContent = 'Опт: уточнити у менеджера';
+    } else {
+      const cost = getOrderPrintCost(items);
+      const productsSum = items.reduce((s, i) => s + (PRODUCT_BASE_PRICE[i.type] || 0) * (parseInt(i.qty) || 0), 0);
+      const urgentSurcharge = urgent ? 100 * unitsCount : 0;
+      const total = productsSum + cost.total + urgentSurcharge;
+      const markers = [];
+      if (cost.combo) markers.push(`combo ${cost.key}`);
+      if (urgent) markers.push(`+${urgentSurcharge}₴ термін`);
+      totalEl.textContent = `${total} ₴` + (markers.length ? ` (${markers.join(', ')})` : '');
+    }
   }
 }
 
