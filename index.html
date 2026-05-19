@@ -510,10 +510,31 @@
       width: 110px;
       height: 110px;
     }
+    .oi-print-size {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 140px;
+    }
+    .oi-print-size label {
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .oi-print-size select {
+      padding: 6px 8px;
+      font-size: 12px;
+    }
+    /* Telegram WebApp: ховаємо весь блок ціноутворення */
+    body.tg-mode .oi-print-size,
+    body.tg-mode #caseTotalRow { display: none !important; }
     /* Armor: глобальний "print" бокс зайвий (тепер per-item файли для друку) */
     body.theme-armor #globalPrintBox { display: none; }
     /* Warrior: ховаємо per-item file box (тепер тільки global) */
     body.theme-warrior .oi-files-row { display: none !important; }
+    /* Warrior: ховаємо ціну (для warrior ціна не передається) */
+    body.theme-warrior #caseTotalRow { display: none !important; }
 
     .file-upload-area {
       border: 2px dashed var(--metal-edge);
@@ -1834,6 +1855,7 @@
         <div class="case-plate-row"><span class="lbl">Позицій</span><span class="val" id="caseItems">0</span></div>
         <div class="case-plate-row"><span class="lbl">Одиниць</span><span class="val" id="caseUnits">0</span></div>
         <div class="case-plate-row"><span class="lbl">Терміновість</span><span class="val" id="caseStatus">Не термінове</span></div>
+        <div class="case-plate-row" id="caseTotalRow"><span class="lbl">Сума</span><span class="val" id="caseTotal">0 ₴</span></div>
       </div>
 
       <div class="section-title">Файли для замовлення</div>
@@ -2153,6 +2175,50 @@ function buildSku(type, color, size) {
   return (SKU_PREFIX[type] || '') + (COLOR_CODE[color] || '') + (SKU_INFIX[type] || '') + size;
 }
 
+// ── Ціни (Modern Armor, ДРОП група знижок 3 -40%) ──
+const PRODUCT_BASE_PRICE = {
+  'Футболка':              365,
+  'Худі легкий':           660,
+  'Худі утеплений':        870,
+  'Світшот легкий':        660,
+  'Світшот утеплений':     660,
+  'легкі штани Топ тайм':  790,
+  'Штани утеплені':       1100
+};
+const PRINT_SIZES = ['A6', 'A5', 'A4', 'A3', 'A2'];
+const PRINT_SIZE_PRICE = { 'A6': 103, 'A5': 112, 'A4': 134, 'A3': 177, 'A2': 262 };
+const PRINT_SIZE_LABEL = {
+  'A6': 'A6 (10×15)', 'A5': 'A5 (20×14)', 'A4': 'A4 (20×29)',
+  'A3': 'A3 (40×29)', 'A2': 'A2 (58×40)'
+};
+// Combo (доп -20% на набір). Ключ — відсортовані розміри через '+'.
+const PRINT_COMBO_PRICE = {
+  'A4+A6':       190,
+  'A3+A6':       225,
+  'A4+A6+A6':    270,
+  'A3+A6+A6':    310,
+  'A2+A6':       290
+};
+
+function buildPrintsList(items) {
+  const prints = [];
+  items.forEach(i => {
+    if (!i.printSize) return;
+    const n = parseInt(i.qty) || 0;
+    for (let k = 0; k < n; k++) prints.push(i.printSize);
+  });
+  return prints;
+}
+function getOrderPrintCost(items) {
+  const prints = buildPrintsList(items);
+  const individualSum = prints.reduce((s, sz) => s + (PRINT_SIZE_PRICE[sz] || 0), 0);
+  const key = [...prints].sort().join('+');
+  if (PRINT_COMBO_PRICE[key] !== undefined) {
+    return { total: PRINT_COMBO_PRICE[key], combo: true, key, individualSum };
+  }
+  return { total: individualSum, combo: false, key, individualSum };
+}
+
 const PHOTO_PREFIX = { ...SKU_PREFIX, 'Худі легкий': 'KUF001', 'легкі штани Топ тайм': null, 'Штани утеплені': null };
 function getProductPhoto(type, color) {
   const prefix = PHOTO_PREFIX[type];
@@ -2238,7 +2304,7 @@ async function addGlobalFiles(field, input) {
 
 function addItem() {
   const id = Date.now();
-  items.push({ id, type: '', color: 'Чорний', size: '', qty: 1, customization: '', files: [] });
+  items.push({ id, type: '', color: 'Чорний', size: '', qty: 1, customization: '', files: [], printSize: '' });
   renderItems();
 }
 
@@ -2306,6 +2372,15 @@ function renderItems() {
 
       <div class="oi-files-row ${item.type ? 'visible' : ''}">
         <div class="oi-files-label">Файли для друку (для цього товару)</div>
+        <div class="oi-print-size">
+          <label>Розмір друку</label>
+          <select onchange="updateItem(${item.id}, 'printSize', this.value)">
+            <option value="">—</option>
+            ${PRINT_SIZES.map(s =>
+              `<option value="${s}" ${item.printSize === s ? 'selected' : ''}>${PRINT_SIZE_LABEL[s]} · ${PRINT_SIZE_PRICE[s]}₴</option>`
+            ).join('')}
+          </select>
+        </div>
         <div class="file-box oi-file-box" onclick="if(!event.target.closest('.thumb-remove'))this.querySelector('input').click()">
           <div class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
           <div class="text">Файли<br>для друку</div>
@@ -2341,6 +2416,8 @@ function updateItem(id, field, value) {
   } else if (field === 'size') {
     updateSizeButtons(id, value);
   } else if (field === 'qty' && typeof updateCasePlate === 'function') {
+    updateCasePlate();
+  } else if (field === 'printSize' && typeof updateCasePlate === 'function') {
     updateCasePlate();
   }
 }
@@ -2486,6 +2563,8 @@ async function validate() {
     const totalFiles = items.reduce((s, i) => s + (i.files?.length || 0), 0);
     if (totalFiles === 0) errors.push('Додайте файли для друку хоча б до одного товару');
     if (items.some(i => (i.files || []).some(f => !f.size))) errors.push('Один із файлів порожній');
+    // Розмір друку — обов'язковий тільки у веб-версії (не Telegram)
+    if (!isTg && items.some(i => !i.printSize)) errors.push('Оберіть розмір друку для кожного товару');
   }
   // Warrior — print файли опціональні, як і раніше
   if (!name) errors.push('Вкажіть ПІБ отримувача');
@@ -2515,6 +2594,10 @@ function getFormData() {
   const comment = document.getElementById('orderComment').value.trim();
 
   const isWarrior = currentForm === 'warrior';
+  const sendPrice = !isWarrior && !isTg;
+  const isUrgent = document.getElementById('urgentCheck').checked;
+  const urgentSurchargePerUnit = sendPrice && isUrgent ? 100 : 0;
+  const cost = sendPrice ? getOrderPrintCost(items) : null;
   const orderData = {
     source_id: isWarrior ? 43 : 31,
     manager_id: 37,
@@ -2536,13 +2619,18 @@ function getFormData() {
     products: items.map(i => ({
       sku: buildSku(i.type, i.color, i.size),
       quantity: i.qty,
-      comment: i.customization || ''
+      comment: i.customization || '',
+      ...(sendPrice ? {
+        price: (PRODUCT_BASE_PRICE[i.type] || 0) + (PRINT_SIZE_PRICE[i.printSize] || 0) + urgentSurchargePerUnit,
+        properties: [{ name: 'Розмір друку', value: PRINT_SIZE_LABEL[i.printSize] || '' }]
+      } : {})
     })),
     custom_fields: [
       { uuid: 'OR_1010', value: 'DTF' }
     ],
     buyer_comment: comment,
     ordered_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19),
+    ...(sendPrice && cost.combo ? { discount_amount: cost.individualSum - cost.total } : {})
   };
   if (isWarrior) orderData.company_id = 4550;
 
@@ -2570,6 +2658,7 @@ function getFormData() {
 }
 
 const isTg = !!(tg.initData && tg.initData.length > 0);
+document.body.classList.toggle('tg-mode', isTg);
 const desktopSubmit = document.getElementById('desktopSubmit');
 const desktopSubmitWrap = desktopSubmit?.parentElement;
 if (isTg) {
@@ -2592,6 +2681,18 @@ function updateCasePlate() {
   const statusEl = document.getElementById('caseStatus');
   statusEl.textContent = urgent ? 'Термінове' : 'Не термінове';
   statusEl.classList.toggle('red', !!urgent);
+
+  const totalEl = document.getElementById('caseTotal');
+  if (totalEl && currentForm === 'armor' && !isTg) {
+    const cost = getOrderPrintCost(items);
+    const productsSum = items.reduce((s, i) => s + (PRODUCT_BASE_PRICE[i.type] || 0) * (parseInt(i.qty) || 0), 0);
+    const urgentSurcharge = urgent ? 100 * unitsCount : 0;
+    const total = productsSum + cost.total + urgentSurcharge;
+    const markers = [];
+    if (cost.combo) markers.push(`combo ${cost.key}`);
+    if (urgent) markers.push(`+${urgentSurcharge}₴ термін`);
+    totalEl.textContent = `${total} ₴` + (markers.length ? ` (${markers.join(', ')})` : '');
+  }
 }
 
 let isSubmitting = false;
