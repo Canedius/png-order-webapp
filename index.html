@@ -503,12 +503,27 @@
       color: var(--text-dim);
       text-transform: uppercase;
       letter-spacing: 1px;
-      flex: 1;
-      min-width: 120px;
+      flex: 1 1 100%;
+      margin-bottom: 2px;
     }
-    .oi-files-row .file-box {
-      width: 110px;
-      height: 110px;
+    .oi-print-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+    .oi-print-stack .oi-print-size {
+      width: 140px;
+    }
+    .oi-print-stack .oi-custom-prints {
+      width: 100%;
+      max-width: 320px;
+    }
+    .oi-files-row .oi-file-box {
+      width: 140px;
+      height: 140px;
+      flex: 0 0 auto;
     }
     .oi-print-size {
       display: flex;
@@ -526,9 +541,10 @@
       padding: 6px 8px;
       font-size: 12px;
     }
-    /* Telegram WebApp: ховаємо весь блок ціноутворення */
+    /* Telegram WebApp: ховаємо ціноутворення/розмір друку/чекбокс позивного */
     body.tg-mode .oi-print-size,
-    body.tg-mode #caseTotalRow { display: none !important; }
+    body.tg-mode #caseTotalRow,
+    body.tg-mode .tg-hide { display: none !important; }
     /* Armor: глобальний "print" бокс зайвий (тепер per-item файли для друку) */
     body.theme-armor #globalPrintBox { display: none; }
     /* Warrior: ховаємо per-item file box (тепер тільки global) */
@@ -666,6 +682,282 @@
       transition: color 0.15s;
     }
     .urgent-row.active .urgent-label { color: var(--danger); }
+
+    /* Custom-order toggle — клон urgent-row, акцентний колір */
+    .custom-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      margin: 8px 0 0;
+      background: var(--metal);
+      border: 1px solid var(--metal-edge);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .custom-row input[type="checkbox"] { display: none; }
+    .custom-check {
+      width: 22px; height: 22px;
+      border: 2px solid var(--metal-edge);
+      border-radius: 4px;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .custom-check::after {
+      content: '✓';
+      font-size: 14px;
+      color: #1e1e1c;
+      display: none;
+    }
+    .custom-row.active .custom-check {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .custom-row.active .custom-check::after { display: block; }
+    .custom-label {
+      font-family: 'Russo One', sans-serif;
+      font-size: 14px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text);
+      transition: color 0.15s;
+    }
+    .custom-row.active .custom-label { color: var(--accent); }
+
+    /* Per-item mode block: tab switcher + content (логотип/позивний АБО print sizes) */
+    .oi-mode-block {
+      flex: 1 1 0;
+      min-width: 220px;
+      display: flex;
+      flex-direction: column;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid var(--metal-edge);
+      border-radius: 6px;
+      align-self: stretch;
+      overflow: hidden;
+    }
+    .mode-tabs {
+      display: flex;
+      background: var(--metal);
+      border-bottom: 1px solid var(--metal-edge);
+    }
+    .mode-tab {
+      flex: 1;
+      padding: 10px 8px;
+      background: transparent;
+      border: none;
+      border-right: 1px solid var(--metal-edge);
+      color: var(--text-dim);
+      font-family: 'Russo One', sans-serif;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      position: relative;
+      transition: color 0.2s, background 0.2s;
+    }
+    .mode-tab:last-child { border-right: none; }
+    .mode-tab:hover { color: var(--text); background: rgba(255,255,255,0.03); }
+    .mode-tab.active { color: var(--accent-bright); }
+    .mode-tab.active::after {
+      content: '';
+      position: absolute;
+      left: 10px; right: 10px; bottom: 0;
+      height: 2px;
+      background: var(--accent);
+    }
+    .mode-content {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px 14px;
+    }
+    .mode-sublabel {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .print-sizes-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 6px;
+    }
+    .print-size-btn {
+      padding: 8px 4px;
+      font-size: 12px;
+      width: 100%;
+    }
+    .size-tile-wrap {
+      position: relative;
+    }
+    .size-tile-wrap .dec-btn {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 18px;
+      height: 18px;
+      padding: 0;
+      border: 1px solid var(--metal-edge);
+      border-radius: 50%;
+      background: var(--danger);
+      color: var(--text);
+      font-size: 14px;
+      font-weight: bold;
+      line-height: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .size-tile-wrap .dec-btn:hover {
+      filter: brightness(1.2);
+    }
+    .oi-item-total {
+      width: 140px;
+      text-align: center;
+      padding: 6px 8px;
+      font-size: 12px;
+      color: var(--text-dim);
+      font-family: 'Russo One', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border: 1px solid var(--metal-edge);
+      border-radius: 4px;
+      background: var(--metal);
+    }
+    .oi-item-total span {
+      color: var(--accent-bright);
+      font-size: 14px;
+    }
+    .extra-check {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--text);
+      user-select: none;
+      padding: 4px 0;
+    }
+    .extra-check input[type="checkbox"] { display: none; }
+    .extra-check-box {
+      width: 20px; height: 20px;
+      border: 2px solid var(--metal-edge);
+      border-radius: 4px;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .extra-check-box::after {
+      content: '✓';
+      font-size: 13px;
+      font-weight: bold;
+      color: #1e1e1c;
+      display: none;
+    }
+    .extra-check input[type="checkbox"]:checked + .extra-check-box {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .extra-check input[type="checkbox"]:checked + .extra-check-box::after {
+      display: block;
+    }
+    .extra-check input[type="checkbox"]:checked ~ .extra-check-label {
+      color: var(--accent);
+    }
+    .extra-check-label {
+      transition: color 0.15s;
+      line-height: 1.3;
+    }
+    .callsign-name, .callsign-pos {
+      width: 100%;
+      padding: 9px 11px;
+      background: var(--bg);
+      border: 1px solid var(--metal-edge);
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      box-sizing: border-box;
+    }
+    .callsign-name:focus, .callsign-pos:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* Custom-prints list (нестандарт) */
+    .oi-custom-prints {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      width: 100%;
+    }
+    .custom-prints-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+    .custom-print-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .custom-print-row select {
+      flex: 0 0 auto;
+      min-width: 150px;
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--metal-edge);
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 13px;
+    }
+    .custom-print-row input[type="text"] {
+      flex: 1;
+      min-width: 0;
+      padding: 8px 10px;
+      background: var(--bg);
+      border: 1px solid var(--metal-edge);
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 13px;
+    }
+    .cp-remove {
+      flex: 0 0 auto;
+      width: 32px; height: 32px;
+      background: transparent;
+      border: 1px solid var(--metal-edge);
+      border-radius: 4px;
+      color: var(--danger);
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .cp-remove:hover {
+      background: rgba(166, 59, 46, 0.15);
+      border-color: var(--danger);
+    }
+    .cp-add {
+      align-self: flex-start;
+      padding: 8px 14px;
+      background: transparent;
+      border: 1px dashed var(--accent);
+      border-radius: 4px;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .cp-add:hover {
+      background: rgba(196, 145, 62, 0.1);
+    }
 
     /* ── Bunker shutter ── */
     .shutter {
@@ -2194,12 +2486,39 @@ const PRINT_SIZE_LABEL = {
 // Combo: будь-які 2+ друки в замовленні = -20% на суму друків
 const PRINT_COMBO_DISCOUNT = 0.20;
 
+function extraA6Count(i) {
+  let n = 0;
+  if (i.hasLogo) n++;
+  if (i.hasCallsign && !(i.hasLogo && i.callsignPos === 'under_logo')) n++;
+  return n;
+}
+function itemPrintsPerUnit(i) {
+  return i.mode === 'custom'
+    ? (i.customPrints || []).reduce((s, cp) => s + (PRINT_SIZE_PRICE[cp.size] || 0), 0)
+    : (PRINT_SIZE_PRICE[i.printSize] || 0) + extraA6Count(i) * PRINT_SIZE_PRICE['A6'];
+}
+function getItemLineTotal(i, urgentPerUnit = 0) {
+  const qty = parseInt(i.qty) || 0;
+  if (!i.type) return 0;
+  const base = (PRODUCT_BASE_PRICE[i.type] || 0) * qty;
+  const printsTotal = itemPrintsPerUnit(i) * qty;
+  const comboActive = buildPrintsList(items).length >= 2;
+  const printsAfterCombo = comboActive ? Math.round(printsTotal * (1 - PRINT_COMBO_DISCOUNT)) : printsTotal;
+  return base + printsAfterCombo + urgentPerUnit * qty;
+}
 function buildPrintsList(items) {
   const prints = [];
   items.forEach(i => {
-    if (!i.printSize) return;
     const n = parseInt(i.qty) || 0;
-    for (let k = 0; k < n; k++) prints.push(i.printSize);
+    for (let k = 0; k < n; k++) {
+      if (i.mode === 'custom') {
+        (i.customPrints || []).forEach(cp => { if (cp.size) prints.push(cp.size); });
+      } else {
+        if (i.printSize) prints.push(i.printSize);
+        const a6 = extraA6Count(i);
+        for (let j = 0; j < a6; j++) prints.push('A6');
+      }
+    }
   });
   return prints;
 }
@@ -2299,7 +2618,13 @@ async function addGlobalFiles(field, input) {
 
 function addItem() {
   const id = Date.now();
-  items.push({ id, type: '', color: 'Чорний', size: '', qty: 1, customization: '', files: [], printSize: '' });
+  items.push({
+    id, type: '', color: 'Чорний', size: '', qty: 1,
+    customization: '', files: [], printSize: 'A3',
+    mode: 'standard',
+    hasLogo: false, hasCallsign: false, callsignName: '', callsignPos: 'under_logo',
+    customPrints: []
+  });
   renderItems();
 }
 
@@ -2353,7 +2678,7 @@ function renderItems() {
               onchange="updateItem(${item.id}, 'qty', parseInt(this.value) || 1)">
 
             <label>Коментар до товару</label>
-            <textarea placeholder="Позивний, шеврони, розташування..."
+            <textarea placeholder="Позивний (якщо є), шеврони, особливі побажання..."
               oninput="updateItem(${item.id}, 'customization', this.value)">${item.customization}</textarea>
           </div>
         </div>
@@ -2367,20 +2692,71 @@ function renderItems() {
 
       <div class="oi-files-row ${item.type ? 'visible' : ''}">
         <div class="oi-files-label">Файли для друку (для цього товару)</div>
-        <div class="oi-print-size">
-          <label>Розмір друку</label>
-          <select onchange="updateItem(${item.id}, 'printSize', this.value)">
-            <option value="">—</option>
-            ${PRINT_SIZES.map(s =>
-              `<option value="${s}" ${item.printSize === s ? 'selected' : ''}>${PRINT_SIZE_LABEL[s]} · ${PRINT_SIZE_PRICE[s]}₴</option>`
-            ).join('')}
-          </select>
+        <div class="oi-mode-block">
+          <div class="mode-tabs">
+            <button type="button" class="mode-tab ${item.mode === 'standard' ? 'active' : ''}"
+              onclick="setItemMode(${item.id}, 'standard')">Стандартне замовлення</button>
+            <button type="button" class="mode-tab ${item.mode === 'custom' ? 'active' : ''}"
+              onclick="setItemMode(${item.id}, 'custom')">Кастомне замовлення</button>
+          </div>
+          <div class="mode-content">
+            ${item.mode === 'custom' ? `
+              <label class="mode-sublabel">Розміри друку</label>
+              <div class="print-sizes-row">
+                ${PRINT_SIZES.map(s => {
+                  const count = (item.customPrints || []).filter(cp => cp.size === s).length;
+                  return `<div class="size-tile-wrap">
+                    <button type="button" class="size-btn print-size-btn ${count > 0 ? 'active' : ''}"
+                      onclick="addCustomPrintSize(${item.id}, '${s}')">${s}${count > 0 ? ` ×${count}` : ''}</button>
+                    ${count > 0 ? `<button type="button" class="dec-btn"
+                      onclick="removeOneCustomPrintSize(${item.id}, '${s}')">−</button>` : ''}
+                  </div>`;
+                }).join('')}
+              </div>
+            ` : `
+              <label class="extra-check">
+                <input type="checkbox" ${item.hasLogo ? 'checked' : ''}
+                  onchange="updateItem(${item.id}, 'hasLogo', this.checked)">
+                <span class="extra-check-box"></span>
+                <span class="extra-check-label">Логотип</span>
+              </label>
+              <label class="extra-check tg-hide">
+                <input type="checkbox" ${item.hasCallsign ? 'checked' : ''}
+                  onchange="updateItem(${item.id}, 'hasCallsign', this.checked)">
+                <span class="extra-check-box"></span>
+                <span class="extra-check-label">Позивний</span>
+              </label>
+              ${item.hasCallsign && item.hasLogo ? `
+                <select class="callsign-pos tg-hide"
+                  onchange="updateItem(${item.id}, 'callsignPos', this.value)">
+                  <option value="under_logo" ${item.callsignPos === 'under_logo' ? 'selected' : ''}>Під логотипом (групується = 1 A6)</option>
+                  <option value="other" ${item.callsignPos === 'other' ? 'selected' : ''}>В іншому місці (+A6 окремо)</option>
+                </select>
+              ` : ''}
+            `}
+          </div>
         </div>
-        <div class="file-box oi-file-box" onclick="if(!event.target.closest('.thumb-remove'))this.querySelector('input').click()">
-          <div class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-          <div class="text">Файли<br>для друку</div>
-          <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg,.ai,.cdr,.eps,.psd"
-            onchange="addItemFiles(${item.id}, this)" onclick="event.stopPropagation()">
+        <div class="oi-print-stack">
+          ${item.mode === 'custom' ? '' : `
+            <div class="oi-print-size">
+              <label>Розмір друку</label>
+              <select onchange="updateItem(${item.id}, 'printSize', this.value)">
+                <option value="">—</option>
+                ${PRINT_SIZES.map(s =>
+                  `<option value="${s}" ${item.printSize === s ? 'selected' : ''}>${s}</option>`
+                ).join('')}
+              </select>
+            </div>
+          `}
+          <div class="file-box oi-file-box" onclick="if(!event.target.closest('.thumb-remove'))this.querySelector('input').click()">
+            <div class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+            <div class="text">Файли<br>для друку</div>
+            <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg,.ai,.cdr,.eps,.psd"
+              onchange="addItemFiles(${item.id}, this)" onclick="event.stopPropagation()">
+          </div>
+          ${!isTg && currentForm === 'armor' ? `
+            <div class="oi-item-total">Сума: <span>${getItemLineTotal(item)} ₴</span></div>
+          ` : ''}
         </div>
       </div>
     </div>
@@ -2403,6 +2779,22 @@ function updateItem(id, field, value) {
     return;
   }
 
+  if (field === 'hasCallsign') {
+    item[field] = value;
+    renderItems();
+    return;
+  }
+  if (field === 'hasLogo') {
+    item[field] = value;
+    if (item.hasCallsign) {
+      renderItems();
+    } else {
+      updateItemTotal(id);
+      updateCasePlate();
+    }
+    return;
+  }
+
   item[field] = value;
 
   if (field === 'color') {
@@ -2410,11 +2802,40 @@ function updateItem(id, field, value) {
     updatePreview(id);
   } else if (field === 'size') {
     updateSizeButtons(id, value);
-  } else if (field === 'qty' && typeof updateCasePlate === 'function') {
-    updateCasePlate();
-  } else if (field === 'printSize' && typeof updateCasePlate === 'function') {
-    updateCasePlate();
+  } else if (field === 'qty' || field === 'printSize' || field === 'callsignPos') {
+    updateItemTotal(id);
+    if (typeof updateCasePlate === 'function') updateCasePlate();
   }
+}
+
+function updateItemTotal(_itemId) {
+  // Будь-яка зміна цін одного товару може вмикати/вимикати combo для всіх → оновлюємо всі плашки
+  items.forEach(it => {
+    const el = document.querySelector(`#items-container [data-id="${it.id}"] .oi-item-total span`);
+    if (el) el.textContent = `${getItemLineTotal(it)} ₴`;
+  });
+}
+
+function addCustomPrint(itemId) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  item.customPrints = item.customPrints || [];
+  item.customPrints.push({ size: 'A4', note: '' });
+  renderItems();
+  updateCasePlate();
+}
+function removeCustomPrint(itemId, idx) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  item.customPrints.splice(idx, 1);
+  renderItems();
+  updateCasePlate();
+}
+function updateCustomPrint(itemId, idx, field, value) {
+  const item = items.find(i => i.id === itemId);
+  if (!item || !item.customPrints || !item.customPrints[idx]) return;
+  item.customPrints[idx][field] = value;
+  if (field === 'size') updateCasePlate();
 }
 
 function updateColorButtons(itemId, color) {
@@ -2559,7 +2980,12 @@ async function validate() {
     if (totalFiles === 0) errors.push('Додайте файли для друку хоча б до одного товару');
     if (items.some(i => (i.files || []).some(f => !f.size))) errors.push('Один із файлів порожній');
     // Розмір друку — обов'язковий тільки у веб-версії (не Telegram)
-    if (!isTg && items.some(i => !i.printSize)) errors.push('Оберіть розмір друку для кожного товару');
+    if (!isTg) {
+      const bad = items.some(i => i.mode === 'custom'
+        ? !(i.customPrints || []).length
+        : !i.printSize);
+      if (bad) errors.push('Оберіть розмір друку для кожного товару');
+    }
   }
   // Warrior — print файли опціональні, як і раніше
   if (!name) errors.push('Вкажіть ПІБ отримувача');
@@ -2591,10 +3017,8 @@ function getFormData() {
   const isWarrior = currentForm === 'warrior';
   const totalUnits = items.reduce((s, i) => s + (parseInt(i.qty) || 0), 0);
   const isWholesale = totalUnits >= 5;
-  // armor+web: завжди шлемо properties (Розмір друку), але price/discount — тільки при тиражі <5
-  const sendProperties = !isWarrior && !isTg;
   // При тиражі від 5 шт — оптовий прайс, менеджер прорахує вручну в KeyCRM
-  const sendPrice = sendProperties && !isWholesale;
+  const sendPrice = !isWarrior && !isTg && !isWholesale;
   const isUrgent = document.getElementById('urgentCheck').checked;
   const urgentSurchargePerUnit = sendPrice && isUrgent ? 100 : 0;
   const cost = sendPrice ? getOrderPrintCost(items) : null;
@@ -2616,22 +3040,32 @@ function getFormData() {
       recipient_phone: phone,
       warehouse_ref: selectedWarehouse ? selectedWarehouse.ref : ''
     },
-    products: items.map(i => ({
-      sku: buildSku(i.type, i.color, i.size),
-      quantity: i.qty,
-      comment: i.customization || '',
-      ...(sendPrice ? {
-        price: (PRODUCT_BASE_PRICE[i.type] || 0) + (PRINT_SIZE_PRICE[i.printSize] || 0) + urgentSurchargePerUnit,
-      } : {}),
-      ...(sendProperties ? {
-        properties: [{ name: 'Розмір друку', value: PRINT_SIZE_LABEL[i.printSize] || '' }]
-      } : {})
-    })),
+    products: items.map(i => {
+      const isItemCustom = i.mode === 'custom';
+      const itemPrintPrice = isItemCustom
+        ? (i.customPrints || []).reduce((s, cp) => s + (PRINT_SIZE_PRICE[cp.size] || 0), 0)
+        : (PRINT_SIZE_PRICE[i.printSize] || 0) + extraA6Count(i) * PRINT_SIZE_PRICE['A6'];
+      return {
+        sku: buildSku(i.type, i.color, i.size),
+        quantity: i.qty,
+        comment: i.customization || '',
+        ...(sendPrice ? {
+          price: (PRODUCT_BASE_PRICE[i.type] || 0) + itemPrintPrice + urgentSurchargePerUnit
+        } : {})
+      };
+    }),
     custom_fields: [
-      { uuid: 'OR_1010', value: 'DTF' }
+      { uuid: 'OR_1010', value: 'DTF' },
+      { uuid: 'OR_1086', value: JSON.stringify(items.map(i => ({
+        тип: i.mode === 'custom' ? 'кастом' : 'стандарт',
+        логотип: i.mode !== 'custom' && !!i.hasLogo,
+        позивний: i.mode !== 'custom' && !!i.hasCallsign,
+        розташування_внизу: i.mode !== 'custom' && !!i.hasCallsign && !!i.hasLogo && i.callsignPos === 'under_logo'
+      }))) }
     ],
     buyer_comment: comment,
     ordered_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19),
+    is_custom_design: items.some(i => i.mode === 'custom'),
     ...(sendPrice && cost.combo ? { discount_amount: cost.individualSum - cost.total } : {})
   };
   if (isWarrior) orderData.company_id = 4550;
@@ -2639,6 +3073,7 @@ function getFormData() {
   formData.append('order', JSON.stringify(orderData));
   formData.append('client', isWarrior ? 'warrior' : 'modern_armor');
   formData.append('urgent', document.getElementById('urgentCheck').checked ? 'true' : 'false');
+  formData.append('order_route', items.some(i => i.mode === 'custom') ? 'designer' : 'standard');
   formData.append('tg_user_id', tg.initDataUnsafe?.user?.id || '7044843745');
   // Visualisations (в KeyCRM як attachments) — глобальні для обох режимів
   globalVizFiles.forEach((f, i) => formData.append(`item_viz_${i}`, f));
@@ -2820,6 +3255,32 @@ function toggleUrgent() {
   if (typeof updateCasePlate === 'function') updateCasePlate();
 }
 
+function setItemMode(itemId, mode) {
+  const item = items.find(i => i.id === itemId);
+  if (!item || item.mode === mode) return;
+  item.mode = mode;
+  renderItems();
+  updateCasePlate();
+}
+
+function addCustomPrintSize(itemId, size) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  item.customPrints = item.customPrints || [];
+  item.customPrints.push({ size });
+  renderItems();
+  updateCasePlate();
+}
+function removeOneCustomPrintSize(itemId, size) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  const idx = (item.customPrints || []).findIndex(cp => cp.size === size);
+  if (idx < 0) return;
+  item.customPrints.splice(idx, 1);
+  renderItems();
+  updateCasePlate();
+}
+
 // ── Form switcher (Modern Armor / Special Warrior) ──
 function applyTheme(name) {
   document.body.classList.remove('theme-armor', 'theme-warrior');
@@ -2839,6 +3300,22 @@ function switchForm(name) {
   currentForm = name;
   try { localStorage.setItem('png_currentForm', name); } catch (e) {}
   applyTheme(name);
+  // Скидаємо всі поля при переключенні бренду
+  items = [];
+  globalVizFiles = [];
+  globalPrintFiles = [];
+  addItem();
+  renderGlobalFileBox('viz');
+  renderGlobalFileBox('print');
+  document.getElementById('recipientName').value = '';
+  if (typeof phoneInput !== 'undefined' && phoneInput) phoneInput.value = '+38 ';
+  if (typeof clearCity === 'function') clearCity();
+  if (typeof clearWarehouse === 'function') clearWarehouse();
+  document.getElementById('orderComment').value = '';
+  document.getElementById('urgentCheck').checked = false;
+  document.getElementById('urgentRow').classList.remove('active');
+  updateCasePlate();
+  window.scrollTo(0, 0);
 }
 
 // ── Warrior submit: Target Lock animation ──
