@@ -21,7 +21,15 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
-const sharp = require('sharp');
+
+// sharp is loaded lazily inside trimTransparent so this module can be
+// require()'d from tests/CI machines that do not have the native binary.
+let sharp = null;
+function getSharp() {
+    if (sharp) return sharp;
+    try { sharp = require('sharp'); } catch (_) { sharp = false; }
+    return sharp;
+}
 
 process.on('unhandledRejection', (reason) => {
     try { nlog(`UNHANDLED REJECTION: ${reason && reason.stack || reason}`); } catch (_) {}
@@ -104,11 +112,11 @@ function fetchOrder(orderId) {
     return httpGet(`/v1/order/${orderId}?include=products,customFields`);
 }
 
-function fetchListPage(page) {
-    // Server-side filters: source_id + status_id. KeyCRM expects literal "[" and "]"
-    // in the query string (filter[source_id]=…). URLSearchParams percent-encodes
-    // brackets, which the API silently ignores → empty result. Build manually.
-    const qs = [
+// Build the raw query string for the KeyCRM list endpoint. Exposed so unit
+// tests can verify the literal "[" / "]" brackets that URLSearchParams would
+// otherwise percent-encode (which KeyCRM silently ignores → empty result).
+function buildListPageQuery(page) {
+    return [
         `limit=50`,
         `page=${page}`,
         `sort=-created_at`,
@@ -116,20 +124,57 @@ function fetchListPage(page) {
         `filter[source_id]=${SOURCE_ID_MODERN_ARMOR}`,
         `filter[status_id]=${STATUS_ID_VBA_READY}`,
     ].join('&');
-    return httpGet(`/v1/order?${qs}`);
 }
 
+function fetchListPage(page) {
+    return httpGet(`/v1/order?${buildListPageQuery(page)}`);
+}
+
+// Identify a file by its leading magic bytes. Exported for tests.
+// Returns extension with leading dot, or '' when nothing matched (caller skips).
 function detectExt(filePath) {
     const fd = fs.openSync(filePath, 'r');
     const buf = Buffer.alloc(16);
-    fs.readSync(fd, buf, 0, 16, 0);
-    fs.closeSync(fd);
+    try {
+        fs.readSync(fd, buf, 0, 16, 0);
+    } finally {
+        // Always release the fd — even if readSync threw (corrupt file, EIO, etc.).
+        fs.closeSync(fd);
+    }
+    return detectExtFromBuffer(buf);
+}
+
+// Pure: decide extension from the first 16 bytes of a file. Exported for tests.
+function detectExtFromBuffer(buf) {
+    if (!buf || buf.length < 4) return '';
+    // PNG: 89 50 4E 47
     if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return '.png';
+    // JPEG: FF D8 FF
     if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return '.jpg';
+    // TIFF little/big endian: II*\0 / MM\0*
     if (buf[0] === 0x49 && buf[1] === 0x49 && buf[2] === 0x2A && buf[3] === 0x00) return '.tif';
     if (buf[0] === 0x4D && buf[1] === 0x4D && buf[2] === 0x00 && buf[3] === 0x2A) return '.tif';
+    // PDF: %PDF (often used by AI files too — Corel imports either way via cdrPDF)
     if (buf[0] === 0x25 && buf[1] === 0x50 && buf[2] === 0x44 && buf[3] === 0x46) return '.pdf';
-    if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46) return '.cdr';
+    // BMP: "BM"
+    if (buf[0] === 0x42 && buf[1] === 0x4D) return '.bmp';
+    // GIF: "GIF8" (7a or 9a)
+    if (buf[0] === 0x47 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x38) return '.gif';
+    // Photoshop PSD: "8BPS"
+    if (buf[0] === 0x38 && buf[1] === 0x42 && buf[2] === 0x50 && buf[3] === 0x53) return '.psd';
+    // PostScript / EPS: "%!PS"
+    if (buf[0] === 0x25 && buf[1] === 0x21 && buf[2] === 0x50 && buf[3] === 0x53) return '.eps';
+    // SVG (text-based): "<?xml" or "<svg" or "<?XM" etc. — best-effort.
+    if (buf[0] === 0x3C) {
+        const head = buf.slice(0, Math.min(buf.length, 16)).toString('ascii').toLowerCase();
+        if (head.includes('<?xml') || head.includes('<svg')) return '.svg';
+    }
+    // RIFF container — needs subtype at bytes 8-11 to distinguish CDR from AVI/WAV/WEBP.
+    if (buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 && buf.length >= 12) {
+        const sub = buf.slice(8, 12).toString('ascii');
+        if (sub.startsWith('CDR') || sub.startsWith('cdr')) return '.cdr';
+        if (sub === 'WEBP') return '.webp';
+    }
     return '';
 }
 
@@ -137,12 +182,17 @@ function detectExt(filePath) {
 async function trimTransparent(filePath) {
     const e = path.extname(filePath).toLowerCase();
     if (e !== '.png' && e !== '.tif' && e !== '.tiff') return;
+    const sharpLib = getSharp();
+    if (!sharpLib) {
+        nlog(`trim SKIP ${path.basename(filePath)}: sharp not installed`);
+        return;
+    }
     const baseName = path.basename(filePath);
     const sizeBefore = fs.statSync(filePath).size;
     const t0 = Date.now();
     const tmpPath = filePath + '.trim.tmp';
     try {
-        await sharp(filePath, { unlimited: true })
+        await sharpLib(filePath, { unlimited: true })
             .trim()
             .withMetadata()
             .toFile(tmpPath);
@@ -208,9 +258,27 @@ function dedupePrints(paths) {
     return Array.from(groups.values()).map(p => ({ path: p[0], count: p.length }));
 }
 
+// Build a single file_list.txt data row. Pure formatter — extracted for tests.
+function buildFileRow(orderId, index, item, qty) {
+    const callsigns = Array.isArray(item.callsigns) ? item.callsigns : [];
+    return [
+        orderId, index,
+        item['тип'] || 'стандарт',
+        item['логотип'] ? 'true' : 'false',
+        item['позивний'] ? 'true' : 'false',
+        item['розташування_внизу'] ? 'true' : 'false',
+        callsigns.map(c => String(c).replace(/[|;]/g, '/')).join(';'),
+        qty,
+    ].join('|');
+}
+
 // Process one order: validate OR_1086, copy prints, schedule trim, return
 // { fileRows, printRows, skip_reason }. skip_reason set => order ignored.
-function processOrder(order, trimPromises) {
+//
+// `deps` allows tests to inject a fake copyOrderPrints implementation; in
+// production it falls back to the real one defined above.
+function processOrder(order, trimPromises, deps = {}) {
+    const copyFn = deps.copyOrderPrints || copyOrderPrints;
     const orderId = order.id;
     if (SKIP_ORDERS.has(orderId)) {
         return { skip_reason: 'manually skipped (SKIP_ORDERS)' };
@@ -227,24 +295,15 @@ function processOrder(order, trimPromises) {
     if (items.some(it => it && it['тип'] === 'кастом')) return { skip_reason: 'has custom items' };
 
     const orderDir = path.join(TEMP_DIR, `order_${orderId}`);
-    const { prints: orderPrints, vizes: orderVizes } = copyOrderPrints(orderId, orderDir, trimPromises);
+    const { prints: orderPrints, vizes: orderVizes } = copyFn(orderId, orderDir, trimPromises);
     const deduped = dedupePrints(orderPrints);
     const printRows = deduped.map(d => `${orderId}|${d.path}|${d.count}`);
     const vizRows = orderVizes.map((p, i) => `${orderId}|${p}|${i + 1}`);
 
     const products = Array.isArray(order.products) ? order.products : [];
     const fileRows = items.map((it, i) => {
-        const callsigns = Array.isArray(it.callsigns) ? it.callsigns : [];
         const qty = (products[i] && products[i].quantity) || 1;
-        return [
-            orderId, i,
-            it['тип'] || 'стандарт',
-            it['логотип'] ? 'true' : 'false',
-            it['позивний'] ? 'true' : 'false',
-            it['розташування_внизу'] ? 'true' : 'false',
-            callsigns.map(c => String(c).replace(/[|;]/g, '/')).join(';'),
-            qty,
-        ].join('|');
+        return buildFileRow(orderId, i, it, qty);
     });
     return {
         fileRows, printRows, vizRows,
@@ -376,13 +435,29 @@ async function runBatch(mode) {
     process.exit(0);
 }
 
-(async () => {
-    const arg = (process.argv[2] || '').trim();
-    if (/^\d+$/.test(arg)) {
-        await runSingle(arg);
-    } else if (arg === 'today' || arg === 'all') {
-        await runBatch(arg);
-    } else {
-        fail(`Невалідний аргумент: "${arg}". Очікую <orderId> | today | all.`);
-    }
-})().catch(e => fail(`FATAL: ${e.message}`));
+// Expose pure helpers + flag set for unit tests. The CLI keeps working when
+// the file is run directly; when require()'d (from tests) we skip the main
+// IIFE so jest/node:test can import without side effects.
+module.exports = {
+    SKIP_ORDERS,
+    SOURCE_ID_MODERN_ARMOR,
+    STATUS_ID_VBA_READY,
+    buildListPageQuery,
+    buildFileRow,
+    dedupePrints,
+    detectExtFromBuffer,
+    processOrder,
+};
+
+if (require.main === module) {
+    (async () => {
+        const arg = (process.argv[2] || '').trim();
+        if (/^\d+$/.test(arg)) {
+            await runSingle(arg);
+        } else if (arg === 'today' || arg === 'all') {
+            await runBatch(arg);
+        } else {
+            fail(`Невалідний аргумент: "${arg}". Очікую <orderId> | today | all.`);
+        }
+    })().catch(e => fail(`FATAL: ${e.message}`));
+}

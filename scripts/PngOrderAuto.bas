@@ -547,14 +547,25 @@ Private Function ImportPrint(doc As Document, filePath As String) As Shape
     dotPos = InStrRev(filePath, ".")
     If dotPos > 0 Then ext = LCase(Mid(filePath, dotPos + 1))
 
+    ' Pick a CorelDRAW filterId for ImportEx based on extension. For unknown
+    ' formats we skip ImportEx entirely and let CorelDRAW auto-detect via Import.
     Dim filterId As Long
+    Dim hasFilter As Boolean: hasFilter = True
     Select Case ext
         Case "cdr": filterId = cdrCDR
         Case "png": filterId = cdrPNG
         Case "jpg", "jpeg": filterId = cdrJPEG
         Case "tif", "tiff": filterId = cdrTIFF
-        Case "pdf": filterId = cdrPDF
-        Case Else: filterId = cdrCDR
+        Case "pdf", "ai": filterId = cdrPDF
+        Case "eps": filterId = cdrEPS
+        Case "svg": filterId = cdrSVG
+        Case "bmp": filterId = cdrBMP
+        Case "gif": filterId = cdrGIF
+        Case "psd": filterId = cdrPSD
+        Case Else
+            ' Unknown extension (webp, heic, etc.) — try Import without an explicit
+            ' filter so CorelDRAW auto-detects. Falls through to the Import-only path below.
+            hasFilter = False
     End Select
 
     Dim impopt As StructImportOptions
@@ -563,8 +574,10 @@ Private Function ImportPrint(doc As Document, filePath As String) As Shape
     impopt.MaintainLayers = True
 
     Dim impflt As ImportFilter
-    Set impflt = doc.ActiveLayer.ImportEx(filePath, filterId, impopt)
-    If Err.Number <> 0 Then
+    If hasFilter Then
+        Set impflt = doc.ActiveLayer.ImportEx(filePath, filterId, impopt)
+    End If
+    If Not hasFilter Or Err.Number <> 0 Then
         Err.Clear
         doc.ActiveLayer.Import filePath
         If Err.Number <> 0 Then
