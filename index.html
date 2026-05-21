@@ -3277,6 +3277,11 @@ function toggleUrgent() {
   const row = document.getElementById('urgentRow');
   cb.checked = !cb.checked;
   row.classList.toggle('active', cb.checked);
+  if (cb.checked) {
+    const t = new Date();
+    const ymd = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+    document.getElementById('shippingDate').value = ymd;
+  }
   if (typeof updateCasePlate === 'function') updateCasePlate();
 }
 
