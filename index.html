@@ -3021,7 +3021,8 @@ function getFormData() {
   const sendPrice = !isWarrior && !isTg && !isWholesale;
   const isUrgent = document.getElementById('urgentCheck').checked;
   const urgentSurchargePerUnit = sendPrice && isUrgent ? 100 : 0;
-  const cost = sendPrice ? getOrderPrintCost(items) : null;
+  const comboActive = sendPrice && buildPrintsList(items).length >= 2;
+  const comboFactor = comboActive ? (1 - PRINT_COMBO_DISCOUNT) : 1;
   const orderData = {
     source_id: isWarrior ? 43 : 31,
     manager_id: 37,
@@ -3045,12 +3046,13 @@ function getFormData() {
       const itemPrintPrice = isItemCustom
         ? (i.customPrints || []).reduce((s, cp) => s + (PRINT_SIZE_PRICE[cp.size] || 0), 0)
         : (PRINT_SIZE_PRICE[i.printSize] || 0) + extraA6Count(i) * PRINT_SIZE_PRICE['A6'];
+      const printPriceAfterCombo = Math.round(itemPrintPrice * comboFactor);
       return {
         sku: buildSku(i.type, i.color, i.size),
         quantity: i.qty,
         comment: i.customization || '',
         ...(sendPrice ? {
-          price: (PRODUCT_BASE_PRICE[i.type] || 0) + itemPrintPrice + urgentSurchargePerUnit
+          price: (PRODUCT_BASE_PRICE[i.type] || 0) + printPriceAfterCombo + urgentSurchargePerUnit
         } : {})
       };
     }),
@@ -3065,8 +3067,7 @@ function getFormData() {
     ],
     buyer_comment: comment,
     ordered_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19),
-    is_custom_design: items.some(i => i.mode === 'custom'),
-    ...(sendPrice && cost.combo ? { discount_amount: cost.individualSum - cost.total } : {})
+    is_custom_design: items.some(i => i.mode === 'custom')
   };
   if (isWarrior) orderData.company_id = 4550;
 
