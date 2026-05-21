@@ -379,6 +379,24 @@
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 4px 12px rgba(0,0,0,0.3);
     }
 
+    .ship-date-input {
+      width: 100%;
+      box-sizing: border-box;
+      background: var(--bg);
+      border: 1px solid var(--metal-edge);
+      border-radius: 4px;
+      color: var(--text);
+      padding: 9px 11px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .ship-date-input:focus { outline: none; border-color: var(--accent); }
+    .ship-date-input::-webkit-calendar-picker-indicator {
+      filter: invert(75%) sepia(40%) saturate(450%) hue-rotate(5deg);
+      cursor: pointer;
+      opacity: 0.9;
+    }
+
 
     .fields-and-files {
       display: grid;
@@ -2192,6 +2210,9 @@
           <div class="ac-dropdown" id="whDropdown"></div>
         </div>
         <div class="selected-value" id="whSelected"></div>
+
+        <label>Дата доставки</label>
+        <input type="date" id="shippingDate" class="ship-date-input">
       </div>
 
       <div class="section-title">Коментар</div>
@@ -3012,6 +3033,7 @@ function getFormData() {
   const formData = new FormData();
   const fullName = document.getElementById('recipientName').value.trim();
   const phone = document.getElementById('recipientPhone').value.trim();
+  const shippingDate = document.getElementById('shippingDate').value;  // empty string if not set
   const comment = document.getElementById('orderComment').value.trim();
 
   const isWarrior = currentForm === 'warrior';
@@ -3039,7 +3061,8 @@ function getFormData() {
       shipping_receive_point: selectedWarehouse ? selectedWarehouse.description : '',
       recipient_full_name: fullName,
       recipient_phone: phone,
-      warehouse_ref: selectedWarehouse ? selectedWarehouse.ref : ''
+      warehouse_ref: selectedWarehouse ? selectedWarehouse.ref : '',
+      ...(shippingDate ? { shipping_date: shippingDate, shipping_date_actual: shippingDate } : {})
     },
     products: items.map(i => {
       const isItemCustom = i.mode === 'custom';
@@ -3239,6 +3262,7 @@ function resetForm() {
     phoneInput.value = '+38 ';
     clearCity();
     clearWarehouse();
+    document.getElementById('shippingDate').value = '';
     document.getElementById('orderComment').value = '';
     document.getElementById('urgentCheck').checked = false;
     document.getElementById('urgentRow').classList.remove('active');
@@ -3312,6 +3336,7 @@ function switchForm(name) {
   if (typeof phoneInput !== 'undefined' && phoneInput) phoneInput.value = '+38 ';
   if (typeof clearCity === 'function') clearCity();
   if (typeof clearWarehouse === 'function') clearWarehouse();
+  document.getElementById('shippingDate').value = '';
   document.getElementById('orderComment').value = '';
   document.getElementById('urgentCheck').checked = false;
   document.getElementById('urgentRow').classList.remove('active');
@@ -3360,6 +3385,7 @@ function closeWarriorLockAndReset() {
   if (typeof phoneInput !== 'undefined') phoneInput.value = '+38 ';
   if (typeof clearCity === 'function') clearCity();
   if (typeof clearWarehouse === 'function') clearWarehouse();
+  document.getElementById('shippingDate').value = '';
   document.getElementById('orderComment').value = '';
   document.getElementById('urgentCheck').checked = false;
   document.getElementById('urgentRow').classList.remove('active');
