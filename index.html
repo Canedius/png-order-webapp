@@ -2506,6 +2506,33 @@ const PRINT_SIZE_LABEL = {
 };
 // Combo: будь-які 2+ друки в замовленні = -20% на суму друків
 const PRINT_COMBO_DISCOUNT = 0.20;
+// Ручні оверрайди ціни «база + комбо» (без urgent) для рівних чисел
+const ITEM_PRICE_OVERRIDES = {
+  'Футболка': {
+    'A3+A6':    590,
+    'A3+A6+A6': 675,
+  },
+};
+function itemPrintsKeyPerUnit(i) {
+  let prints;
+  if (i.mode === 'custom') {
+    prints = (i.customPrints || []).map(cp => cp.size).filter(Boolean);
+  } else {
+    prints = i.printSize ? [i.printSize] : [];
+    for (let j = 0; j < extraA6Count(i); j++) prints.push('A6');
+  }
+  return prints.sort().join('+');
+}
+function getUnitPriceWithCombo(i, comboActive) {
+  const base = PRODUCT_BASE_PRICE[i.type] || 0;
+  if (comboActive) {
+    const ov = ITEM_PRICE_OVERRIDES[i.type]?.[itemPrintsKeyPerUnit(i)];
+    if (ov != null) return ov;
+  }
+  const pp = itemPrintsPerUnit(i);
+  const printsAfterCombo = comboActive ? Math.round(pp * (1 - PRINT_COMBO_DISCOUNT)) : pp;
+  return base + printsAfterCombo;
+}
 
 function extraA6Count(i) {
   let n = 0;
@@ -2521,11 +2548,8 @@ function itemPrintsPerUnit(i) {
 function getItemLineTotal(i, urgentPerUnit = 0) {
   const qty = parseInt(i.qty) || 0;
   if (!i.type) return 0;
-  const base = (PRODUCT_BASE_PRICE[i.type] || 0) * qty;
-  const printsTotal = itemPrintsPerUnit(i) * qty;
   const comboActive = buildPrintsList(items).length >= 2;
-  const printsAfterCombo = comboActive ? Math.round(printsTotal * (1 - PRINT_COMBO_DISCOUNT)) : printsTotal;
-  return base + printsAfterCombo + urgentPerUnit * qty;
+  return (getUnitPriceWithCombo(i, comboActive) + urgentPerUnit) * qty;
 }
 function buildPrintsList(items) {
   const prints = [];
@@ -3065,17 +3089,12 @@ function getFormData() {
       ...(shippingDate ? { shipping_date: shippingDate, shipping_date_actual: shippingDate } : {})
     },
     products: items.map(i => {
-      const isItemCustom = i.mode === 'custom';
-      const itemPrintPrice = isItemCustom
-        ? (i.customPrints || []).reduce((s, cp) => s + (PRINT_SIZE_PRICE[cp.size] || 0), 0)
-        : (PRINT_SIZE_PRICE[i.printSize] || 0) + extraA6Count(i) * PRINT_SIZE_PRICE['A6'];
-      const printPriceAfterCombo = Math.round(itemPrintPrice * comboFactor);
       return {
         sku: buildSku(i.type, i.color, i.size),
         quantity: i.qty,
         comment: i.customization || '',
         ...(sendPrice ? {
-          price: (PRODUCT_BASE_PRICE[i.type] || 0) + printPriceAfterCombo + urgentSurchargePerUnit
+          price: getUnitPriceWithCombo(i, comboActive) + urgentSurchargePerUnit
         } : {})
       };
     }),
@@ -3149,9 +3168,9 @@ function updateCasePlate() {
       totalEl.textContent = 'Опт: уточнити у менеджера';
     } else {
       const cost = getOrderPrintCost(items);
-      const productsSum = items.reduce((s, i) => s + (PRODUCT_BASE_PRICE[i.type] || 0) * (parseInt(i.qty) || 0), 0);
-      const urgentSurcharge = urgent ? 100 * unitsCount : 0;
-      const total = productsSum + cost.total + urgentSurcharge;
+      const urgentPerUnit = urgent ? 100 : 0;
+      const total = items.reduce((s, i) => s + getItemLineTotal(i, urgentPerUnit), 0);
+      const urgentSurcharge = urgentPerUnit * unitsCount;
       const markers = [];
       if (cost.combo) markers.push(`combo ${cost.key}`);
       if (urgent) markers.push(`+${urgentSurcharge}₴ термін`);
