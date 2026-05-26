@@ -2172,7 +2172,7 @@
       <div class="delivery-section" style="display:flex;gap:12px;justify-content:center;">
         <div class="file-box" id="globalVizBox" onclick="if(!event.target.closest('.thumb-remove'))this.querySelector('input').click()">
           <div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
-          <div class="text">Візуалі-<br>зації</div>
+          <div class="text">Візуалізації для замовлень</div>
           <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg"
             onchange="addGlobalFiles('viz', this)" onclick="event.stopPropagation()">
         </div>
@@ -2647,7 +2647,7 @@ function renderGlobalFileBox(field) {
   box.innerHTML = hasFiles
     ? `${getGlobalThumbsHtml(files, field)}<div class="overlay-label">${field === 'viz' ? 'Візуалізації' : 'Для друку'}</div>`
     : field === 'viz'
-      ? `<div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div><div class="text">Візуалі-<br>зації</div>`
+      ? `<div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div><div class="text">Візуалізації для замовлень</div>`
       : `<div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div class="text">Файли<br>для друку</div>`;
   box.appendChild(inputEl);
 }
@@ -3284,7 +3284,7 @@ function resetForm() {
     phoneInput.value = '+38 ';
     clearCity();
     clearWarehouse();
-    document.getElementById('shippingDate').value = '';
+    document.getElementById('shippingDate').value = tomorrowYMD();
     document.getElementById('orderComment').value = '';
     document.getElementById('urgentCheck').checked = false;
     document.getElementById('urgentRow').classList.remove('active');
@@ -3363,7 +3363,7 @@ function switchForm(name) {
   if (typeof phoneInput !== 'undefined' && phoneInput) phoneInput.value = '+38 ';
   if (typeof clearCity === 'function') clearCity();
   if (typeof clearWarehouse === 'function') clearWarehouse();
-  document.getElementById('shippingDate').value = '';
+  document.getElementById('shippingDate').value = tomorrowYMD();
   document.getElementById('orderComment').value = '';
   document.getElementById('urgentCheck').checked = false;
   document.getElementById('urgentRow').classList.remove('active');
@@ -3412,7 +3412,7 @@ function closeWarriorLockAndReset() {
   if (typeof phoneInput !== 'undefined') phoneInput.value = '+38 ';
   if (typeof clearCity === 'function') clearCity();
   if (typeof clearWarehouse === 'function') clearWarehouse();
-  document.getElementById('shippingDate').value = '';
+  document.getElementById('shippingDate').value = tomorrowYMD();
   document.getElementById('orderComment').value = '';
   document.getElementById('urgentCheck').checked = false;
   document.getElementById('urgentRow').classList.remove('active');
@@ -3438,7 +3438,14 @@ if (isTg) {
   document.getElementById('animLockNewBtn').addEventListener('click', closeWarriorLockAndReset);
 }
 
+function tomorrowYMD() {
+  const t = new Date();
+  t.setDate(t.getDate() + 1);
+  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+}
+
 addItem();
+document.getElementById('shippingDate').value = tomorrowYMD();
 </script>
 
 <div class="shutter" id="shutter">
