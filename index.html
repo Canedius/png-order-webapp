@@ -3015,6 +3015,7 @@ async function validate() {
     if (!item.color) errors.push(`Оберіть колір${n}`);
     if (!item.size) errors.push(`Оберіть розмір${n}`);
     if (!item.qty || item.qty < 1) errors.push(`Вкажіть кількість${n}`);
+    if (item.hasCallsign && !item.customization.trim()) errors.push(`Вкажіть позивний у коментарі до товару${n}`);
   }
 
   const name = document.getElementById('recipientName').value.trim();
