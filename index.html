@@ -565,10 +565,10 @@
     body.tg-mode .tg-hide { display: none !important; }
     /* Armor: глобальний "print" бокс зайвий (тепер per-item файли для друку) */
     body.theme-armor #globalPrintBox { display: none; }
-    /* Warrior: ховаємо per-item file box (тепер тільки global) */
-    body.theme-warrior .oi-files-row { display: none !important; }
-    /* Warrior: ховаємо ціну (для warrior ціна не передається) */
-    body.theme-warrior #caseTotalRow { display: none !important; }
+    /* Warrior: показуємо per-item конфіг (режим/лого/позивний/розмір друку — для ціни),
+       але ховаємо сам per-item файл-бокс і його заголовок (файли вантажаться глобальним боксом) */
+    body.theme-warrior .oi-files-label,
+    body.theme-warrior .oi-file-box { display: none !important; }
 
     .file-upload-area {
       border: 2px dashed var(--metal-edge);
@@ -2802,7 +2802,7 @@ function renderItems() {
             <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg,.ai,.cdr,.eps,.psd"
               onchange="addItemFiles(${item.id}, this)" onclick="event.stopPropagation()">
           </div>
-          ${!isTg && currentForm === 'armor' ? `
+          ${!isTg ? `
             <div class="oi-item-total">Сума: <span>${getItemLineTotal(item)} ₴</span></div>
           ` : ''}
         </div>
@@ -3021,22 +3021,25 @@ async function validate() {
   const name = document.getElementById('recipientName').value.trim();
   const phoneDigits = document.getElementById('recipientPhone').value.replace(/\D/g, '');
 
-  // Глобальні візуалки — обов'язкові для обох режимів (у KeyCRM)
-  if (!globalVizFiles.length || globalVizFiles.some(f => !f.size)) errors.push('Додайте візуалізацію');
+  // Файли: для Armor — обов'язкові (виз + друк); для Warrior — усі опціональні
   if (currentForm === 'armor') {
+    // Глобальні візуалки (у KeyCRM)
+    if (!globalVizFiles.length || globalVizFiles.some(f => !f.size)) errors.push('Додайте візуалізацію');
     // Per-item файли для друку (обов'язкові — хоча б 1 на замовлення)
     const totalFiles = items.reduce((s, i) => s + (i.files?.length || 0), 0);
     if (totalFiles === 0) errors.push('Додайте файли для друку хоча б до одного товару');
     if (items.some(i => (i.files || []).some(f => !f.size))) errors.push('Один із файлів порожній');
-    // Розмір друку — обов'язковий тільки у веб-версії (не Telegram)
-    if (!isTg) {
-      const bad = items.some(i => i.mode === 'custom'
-        ? !(i.customPrints || []).length
-        : !i.printSize);
-      if (bad) errors.push('Оберіть розмір друку для кожного товару');
-    }
+  } else {
+    // Warrior: жоден файл не обов'язковий, але прикріплений не має бути порожнім
+    if (globalVizFiles.some(f => !f.size) || globalPrintFiles.some(f => !f.size)) errors.push('Один із файлів порожній');
   }
-  // Warrior — print файли опціональні, як і раніше
+  // Розмір друку — обов'язковий у веб-версії для обох форм (потрібен для розрахунку ціни)
+  if (!isTg) {
+    const bad = items.some(i => i.mode === 'custom'
+      ? !(i.customPrints || []).length
+      : !i.printSize);
+    if (bad) errors.push('Оберіть розмір друку для кожного товару');
+  }
   if (!name) errors.push('Вкажіть ПІБ отримувача');
   if (phoneDigits.length !== 12) errors.push('Введіть повний номер телефону');
   if (!selectedCity) errors.push('Оберіть місто');
@@ -3068,7 +3071,8 @@ function getFormData() {
   const totalUnits = items.reduce((s, i) => s + (parseInt(i.qty) || 0), 0);
   const isWholesale = totalUnits >= 5;
   // При тиражі від 5 шт — оптовий прайс, менеджер прорахує вручну в KeyCRM
-  const sendPrice = !isWarrior && !isTg && !isWholesale;
+  // Warrior використовує ту саму цінову логіку, що й Modern Armor
+  const sendPrice = !isTg && !isWholesale;
   const isUrgent = document.getElementById('urgentCheck').checked;
   const urgentSurchargePerUnit = sendPrice && isUrgent ? 100 : 0;
   const comboActive = sendPrice && buildPrintsList(items).length >= 2;
@@ -3167,7 +3171,7 @@ function updateCasePlate() {
   statusEl.classList.toggle('red', !!urgent);
 
   const totalEl = document.getElementById('caseTotal');
-  if (totalEl && currentForm === 'armor' && !isTg) {
+  if (totalEl && !isTg) {
     if (unitsCount >= 5) {
       totalEl.textContent = 'Опт: уточнити у менеджера';
     } else {
