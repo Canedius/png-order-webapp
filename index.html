@@ -2542,6 +2542,13 @@ function itemPrintsPerUnit(i) {
     ? (i.customPrints || []).reduce((s, cp) => s + (PRINT_SIZE_PRICE[cp.size] || 0), 0)
     : (PRINT_SIZE_PRICE[i.printSize] || 0) + extraA6Count(i) * PRINT_SIZE_PRICE['A6'];
 }
+// Поточна надбавка за терміновість на одиницю (веб, не опт). Дзеркалить логіку сайдбара/getFormData.
+function currentUrgentPerUnit() {
+  if (isTg) return 0;
+  const unitsCount = items.reduce((s, i) => s + (parseInt(i.qty) || 0), 0);
+  if (unitsCount >= 5) return 0;
+  return document.getElementById('urgentCheck')?.checked ? 100 : 0;
+}
 function getItemLineTotal(i, urgentPerUnit = 0) {
   const qty = parseInt(i.qty) || 0;
   if (!i.type) return 0;
@@ -2797,7 +2804,7 @@ function renderItems() {
               onchange="addItemFiles(${item.id}, this)" onclick="event.stopPropagation()">
           </div>
           ${!isTg ? `
-            <div class="oi-item-total">Сума: <span>${getItemLineTotal(item)} ₴</span></div>
+            <div class="oi-item-total">Сума: <span>${getItemLineTotal(item, currentUrgentPerUnit())} ₴</span></div>
           ` : ''}
         </div>
       </div>
@@ -2854,7 +2861,7 @@ function updateItemTotal(_itemId) {
   // Будь-яка зміна цін одного товару може вмикати/вимикати combo для всіх → оновлюємо всі плашки
   items.forEach(it => {
     const el = document.querySelector(`#items-container [data-id="${it.id}"] .oi-item-total span`);
-    if (el) el.textContent = `${getItemLineTotal(it)} ₴`;
+    if (el) el.textContent = `${getItemLineTotal(it, currentUrgentPerUnit())} ₴`;
   });
 }
 
@@ -3050,6 +3057,11 @@ async function validate() {
       const ok = await tgConfirm('У замовленні є товари з однаковими файлами для друку. Перевірте чи правильно прикріплені файли. Створити замовлення?');
       if (!ok) return false;
     }
+  }
+  // Warning: візуалізацій більше, ніж товарів
+  if (globalVizFiles.length > items.length) {
+    const ok = await tgConfirm(`У замовленні ${globalVizFiles.length} візуалізації, а товар ${items.length}. Перевірте чи правильно прикріплені файли. Створити замовлення?`);
+    if (!ok) return false;
   }
   return true;
 }
@@ -3303,6 +3315,7 @@ function toggleUrgent() {
     const ymd = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
     document.getElementById('shippingDate').value = ymd;
   }
+  updateItemTotal();
   if (typeof updateCasePlate === 'function') updateCasePlate();
 }
 
