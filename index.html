@@ -3045,6 +3045,12 @@ async function validate() {
   if (phoneDigits.length !== 12) errors.push('Введіть повний номер телефону');
   if (!selectedCity) errors.push('Оберіть місто');
   if (!selectedWarehouse) errors.push('Оберіть відділення / поштомат');
+  // Відвантаження у вихідні неможливе — переносимо на понеділок і блокуємо подачу
+  const shipInp = document.getElementById('shippingDate');
+  if (isWeekendYMD(shipInp.value)) {
+    shipInp.value = fmtYMD(rollToWeekday(new Date(shipInp.value + 'T00:00:00')));
+    errors.push('Відвантаження у вихідні неможливе — дату перенесено на понеділок. Перевірте та подайте ще раз.');
+  }
   if (errors.length) {
     if (isTg) tg.showAlert(errors[0]); else alert(errors[0]);
     return false;
@@ -3311,9 +3317,7 @@ function toggleUrgent() {
   cb.checked = !cb.checked;
   row.classList.toggle('active', cb.checked);
   if (cb.checked) {
-    const t = new Date();
-    const ymd = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
-    document.getElementById('shippingDate').value = ymd;
+    document.getElementById('shippingDate').value = fmtYMD(rollToWeekday(new Date()));
   }
   updateItemTotal();
   if (typeof updateCasePlate === 'function') updateCasePlate();
@@ -3450,11 +3454,38 @@ if (isTg) {
   document.getElementById('animLockNewBtn').addEventListener('click', closeWarriorLockAndReset);
 }
 
+function fmtYMD(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+// Переносить суботу/неділю на найближчий понеділок
+function rollToWeekday(d) {
+  const day = d.getDay(); // 0 = неділя, 6 = субота
+  if (day === 6) d.setDate(d.getDate() + 2);
+  else if (day === 0) d.setDate(d.getDate() + 1);
+  return d;
+}
 function tomorrowYMD() {
   const t = new Date();
   t.setDate(t.getDate() + 1);
-  return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+  rollToWeekday(t);
+  return fmtYMD(t);
 }
+// Якщо обрана дата — вихідний, переносимо на понеділок
+function isWeekendYMD(ymd) {
+  if (!ymd) return false;
+  const day = new Date(ymd + 'T00:00:00').getDay();
+  return day === 0 || day === 6;
+}
+function bumpShippingDateFromWeekend() {
+  const inp = document.getElementById('shippingDate');
+  if (isWeekendYMD(inp.value)) {
+    const d = rollToWeekday(new Date(inp.value + 'T00:00:00'));
+    inp.value = fmtYMD(d);
+    const msg = 'Відвантаження у вихідні неможливе — дату перенесено на понеділок.';
+    if (isTg && tg.showAlert) tg.showAlert(msg); else alert(msg);
+  }
+}
+document.getElementById('shippingDate').addEventListener('change', bumpShippingDateFromWeekend);
 
 addItem();
 document.getElementById('shippingDate').value = tomorrowYMD();
