@@ -2668,7 +2668,7 @@ async function addGlobalFiles(field, input) {
 function addItem() {
   const id = Date.now();
   items.push({
-    id, type: '', color: 'Чорний', size: '', qty: 1,
+    id, type: '', color: '', size: '', qty: 1,
     customization: '', files: [], printSize: 'A3',
     mode: 'standard',
     hasLogo: false, hasCallsign: false, callsignName: '', callsignPos: 'under_logo',
@@ -2820,7 +2820,7 @@ function updateItem(id, field, value) {
 
   if (field === 'type') {
     const colors = COLORS_BY_TYPE[value] || [];
-    if (!colors.includes(item.color)) item.color = colors[0] || '';
+    if (!colors.includes(item.color)) item.color = '';
     const sizes = SIZES_BY_TYPE[value] || [];
     if (!sizes.includes(item.size)) item.size = '';
     item.type = value;
