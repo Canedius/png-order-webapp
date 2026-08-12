@@ -2459,6 +2459,17 @@ const SIZES_BY_TYPE = {
   'легкі штани Топ тайм': ['S', 'M', 'L', 'XL', 'XXL'],
   'Штани утеплені': ['XS', 'S', 'M', 'L', 'XL', 'XXL']
 };
+// Винятки: розміри, які є лише в окремих кольорах
+const SIZES_BY_TYPE_COLOR = {
+  'Худі утеплений': {
+    'Чорний': ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL']
+  }
+};
+function getSizes(type, color) {
+  const byColor = SIZES_BY_TYPE_COLOR[type];
+  if (byColor && byColor[color]) return byColor[color];
+  return SIZES_BY_TYPE[type] || [];
+}
 
 const SKU_PREFIX = {
   'Футболка': 'KUF006',
@@ -2716,7 +2727,7 @@ function renderItems() {
 
             <label>Розмір *</label>
             <div class="sizes-row">
-              ${(SIZES_BY_TYPE[item.type] || SIZES_BY_TYPE['Футболка']).map(s => `
+              ${(getSizes(item.type, item.color).length ? getSizes(item.type, item.color) : SIZES_BY_TYPE['Футболка']).map(s => `
                 <button class="size-btn ${item.size === s ? 'active' : ''}"
                   onclick="updateItem(${item.id}, 'size', '${s}')">${s}</button>
               `).join('')}
@@ -2821,10 +2832,25 @@ function updateItem(id, field, value) {
   if (field === 'type') {
     const colors = COLORS_BY_TYPE[value] || [];
     if (!colors.includes(item.color)) item.color = '';
-    const sizes = SIZES_BY_TYPE[value] || [];
+    const sizes = getSizes(value, item.color);
     if (!sizes.includes(item.size)) item.size = '';
     item.type = value;
     renderItems();
+    return;
+  }
+
+  if (field === 'color') {
+    const prevSizes = getSizes(item.type, item.color);
+    const nextSizes = getSizes(item.type, value);
+    item.color = value;
+    if (item.size && !nextSizes.includes(item.size)) item.size = '';
+    // набір розмірів залежить від кольору → перемальовуємо, щоб кнопки збіглися
+    if (prevSizes.join() !== nextSizes.join()) {
+      renderItems();
+      return;
+    }
+    updateColorButtons(id, value);
+    updatePreview(id);
     return;
   }
 
@@ -2846,10 +2872,7 @@ function updateItem(id, field, value) {
 
   item[field] = value;
 
-  if (field === 'color') {
-    updateColorButtons(id, value);
-    updatePreview(id);
-  } else if (field === 'size') {
+  if (field === 'size') {
     updateSizeButtons(id, value);
   } else if (field === 'qty' || field === 'printSize' || field === 'callsignPos') {
     updateItemTotal(id);
@@ -3124,7 +3147,8 @@ function getFormData() {
         тип: i.mode === 'custom' ? 'кастом' : 'стандарт',
         логотип: i.mode !== 'custom' && !!i.hasLogo,
         позивний: i.mode !== 'custom' && !!i.hasCallsign,
-        розташування_внизу: i.mode !== 'custom' && !!i.hasCallsign && !!i.hasLogo && i.callsignPos === 'under_logo'
+        розташування_внизу: i.mode !== 'custom' && !!i.hasCallsign && !!i.hasLogo && i.callsignPos === 'under_logo',
+        колір: i.color || ''
       }))) }
     ],
     buyer_comment: comment,
