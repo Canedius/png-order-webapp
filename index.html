@@ -538,10 +538,35 @@
       width: 100%;
       max-width: 320px;
     }
-    .oi-files-row .oi-file-box {
+    .oi-files-row .oi-file-box,
+    .oi-files-row .oi-viz-box {
       width: 140px;
       height: 140px;
       flex: 0 0 auto;
+    }
+    /* Візуалка + файли для друку стоять поруч у стеку позиції */
+    .oi-box-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+    /* Картка, у яку зараз піде Ctrl+V */
+    .file-box.viz-active {
+      border-style: solid;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent);
+    }
+    /* Заміна вже прикріпленої візуалки має бути помітною */
+    @keyframes vizSwapFlash {
+      0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 70%, transparent); }
+      40%  { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 45%, transparent); }
+      100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
+    }
+    .file-box.viz-swapped { animation: vizSwapFlash .7s ease-out; }
+    @media (prefers-reduced-motion: reduce) {
+      .file-box.viz-swapped { animation: none; }
     }
     .oi-print-size {
       display: flex;
@@ -563,10 +588,14 @@
     body.tg-mode .oi-print-size,
     body.tg-mode #caseTotalRow,
     body.tg-mode .tg-hide { display: none !important; }
-    /* Armor: глобальний "print" бокс зайвий (тепер per-item файли для друку) */
-    body.theme-armor #globalPrintBox { display: none; }
+    /* Armor: глобальний "print" бокс зайвий (тепер per-item файли для друку).
+       Візуалка теж per-item, тож для Armor уся секція глобальних файлів порожня. */
+    body.theme-armor #globalPrintBox,
+    body.theme-armor #globalFilesTitle,
+    body.theme-armor #globalFilesSection { display: none; }
     /* Warrior: показуємо per-item конфіг (режим/лого/позивний/розмір друку — для ціни),
-       але ховаємо сам per-item файл-бокс і його заголовок (файли вантажаться глобальним боксом) */
+       але ховаємо per-item бокс ДРУКУ і його заголовок (файли друку вантажаться глобальним боксом).
+       Бокс візуалки (.oi-viz-box) лишається per-item для обох брендів. */
     body.theme-warrior .oi-files-label,
     body.theme-warrior .oi-file-box { display: none !important; }
 
@@ -2162,14 +2191,8 @@
         <div class="case-plate-row" id="caseTotalRow"><span class="lbl">Сума</span><span class="val" id="caseTotal">0 ₴</span></div>
       </div>
 
-      <div class="section-title">Файли для замовлення</div>
-      <div class="delivery-section" style="display:flex;gap:12px;justify-content:center;">
-        <div class="file-box" id="globalVizBox" onclick="if(!event.target.closest('.thumb-remove'))this.querySelector('input').click()">
-          <div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
-          <div class="text">Візуалізації для замовлень</div>
-          <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg"
-            onchange="addGlobalFiles('viz', this)" onclick="event.stopPropagation()">
-        </div>
+      <div class="section-title" id="globalFilesTitle">Файли для замовлення</div>
+      <div class="delivery-section" id="globalFilesSection" style="display:flex;gap:12px;justify-content:center;">
         <div class="file-box" id="globalPrintBox" onclick="if(!event.target.closest('.thumb-remove'))this.querySelector('input').click()">
           <div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
           <div class="text">Файли<br>для друку</div>
@@ -2602,8 +2625,12 @@ function getProductPhoto(type, color) {
 }
 
 let items = [];
-let globalVizFiles = [];
+// Лічильник id позицій. Раніше id брався з Date.now(), і дві позиції, додані в
+// одну мілісекунду, отримували однаковий id — файли другої лягали на першу.
+let itemIdSeq = 0;
 let globalPrintFiles = [];
+// Картка, у яку піде наступний Ctrl+V (обирається кліком по боксу візуалки).
+let activeVizItemId = null;
 let currentForm = 'armor';
 const thumbCache = new WeakMap(); // file -> dataURL (80x80 jpeg)
 
@@ -2611,8 +2638,12 @@ function makeThumb(file) {
   return new Promise(resolve => {
     if (!file.type.startsWith('image/')) { resolve(null); return; }
     const reader = new FileReader();
+    // Без onerror биті/непідтримувані зображення вішали промис назавжди,
+    // і файл не додавався взагалі — тому обидві гілки мусять резолвитись.
+    reader.onerror = () => resolve(null);
     reader.onload = e => {
       const img = new Image();
+      img.onerror = () => resolve(null);
       img.onload = () => {
         const SIZE = 80;
         const canvas = document.createElement('canvas');
@@ -2629,8 +2660,7 @@ function makeThumb(file) {
 }
 
 function removeGlobalFile(field, idx) {
-  if (field === 'viz') globalVizFiles.splice(idx, 1);
-  else globalPrintFiles.splice(idx, 1);
+  globalPrintFiles.splice(idx, 1);
   renderGlobalFileBox(field);
 }
 
@@ -2649,23 +2679,22 @@ function getGlobalThumbsHtml(files, field) {
   return `<div class="thumbs-grid n${n}">${thumbItems}</div>`;
 }
 
+// Глобальний бокс лишився один — файли для друку (використовує лише Warrior).
 function renderGlobalFileBox(field) {
-  const box = document.getElementById(field === 'viz' ? 'globalVizBox' : 'globalPrintBox');
+  const box = document.getElementById('globalPrintBox');
   if (!box) return;
-  const files = field === 'viz' ? globalVizFiles : globalPrintFiles;
+  const files = globalPrintFiles;
   const inputEl = box.querySelector('input[type="file"]');
   const hasFiles = files.length > 0;
   box.className = 'file-box' + (hasFiles ? ' has-files' : '');
   box.innerHTML = hasFiles
-    ? `${getGlobalThumbsHtml(files, field)}<div class="overlay-label">${field === 'viz' ? 'Візуалізації' : 'Для друку'}</div>`
-    : field === 'viz'
-      ? `<div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div><div class="text">Візуалізації для замовлень</div>`
-      : `<div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div class="text">Файли<br>для друку</div>`;
+    ? `${getGlobalThumbsHtml(files, 'print')}<div class="overlay-label">Для друку</div>`
+    : `<div class="icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div class="text">Файли<br>для друку</div>`;
   box.appendChild(inputEl);
 }
 
 async function addGlobalFiles(field, input) {
-  const arr = field === 'viz' ? globalVizFiles : globalPrintFiles;
+  const arr = globalPrintFiles;
   const newFiles = [...input.files];
   input.value = '';
   await Promise.all(newFiles.map(async file => {
@@ -2677,10 +2706,11 @@ async function addGlobalFiles(field, input) {
 }
 
 function addItem() {
-  const id = Date.now();
+  const id = ++itemIdSeq;
   items.push({
     id, type: '', color: '', size: '', qty: 1,
-    customization: '', files: [], printSize: 'A3',
+    // viz — рівно одна візуалка на позицію (скаляр, не масив)
+    customization: '', files: [], viz: null, printSize: 'A3',
     mode: 'standard',
     hasLogo: false, hasCallsign: false, callsignName: '', callsignPos: 'under_logo',
     customPrints: []
@@ -2808,11 +2838,19 @@ function renderItems() {
               </select>
             </div>
           `}
-          <div class="file-box oi-file-box" onclick="if(!event.target.closest('.thumb-remove'))this.querySelector('input').click()">
-            <div class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-            <div class="text">Файли<br>для друку</div>
-            <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg,.ai,.cdr,.eps,.psd"
-              onchange="addItemFiles(${item.id}, this)" onclick="event.stopPropagation()">
+          <div class="oi-box-row">
+            <div class="file-box oi-viz-box" onclick="setActiveVizItem(${item.id});if(!event.target.closest('.thumb-remove'))this.querySelector('input').click()">
+              <div class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+              <div class="text">Візуалізація<br>товару</div>
+              <input type="file" accept="image/*,.pdf,.png,.jpg,.jpeg,.svg"
+                onchange="addItemViz(${item.id}, this)" onclick="event.stopPropagation()">
+            </div>
+            <div class="file-box oi-file-box" onclick="if(!event.target.closest('.thumb-remove'))this.querySelector('input').click()">
+              <div class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+              <div class="text">Файли<br>для друку</div>
+              <input type="file" multiple accept="image/*,.pdf,.png,.jpg,.jpeg,.svg,.ai,.cdr,.eps,.psd"
+                onchange="addItemFiles(${item.id}, this)" onclick="event.stopPropagation()">
+            </div>
           </div>
           ${!isTg ? `
             <div class="oi-item-total">Сума: <span>${getItemLineTotal(item, currentUrgentPerUnit())} ₴</span></div>
@@ -2822,7 +2860,8 @@ function renderItems() {
     </div>
   `;
   }).join('');
-  items.forEach(i => renderItemFileBox(i.id));
+  items.forEach(i => { renderItemFileBox(i.id); renderItemVizBox(i.id); });
+  syncActiveVizHighlight();
 }
 
 function updateItem(id, field, value) {
@@ -3009,17 +3048,104 @@ async function addItemFiles(itemId, input) {
   renderItemFileBox(itemId);
 }
 
-// ── Paste from clipboard → globalVizFiles (Візуалізації для KeyCRM) ──
+// ── Візуалізація: рівно одна на позицію ──────────────────────────────────
+// Індекс позиції потім їде в KeyCRM у назві вкладення (t{N}__), і саме за ним
+// візуалка стає навпроти свого товару на «Візуалі на виробництво».
+
+function renderItemVizBox(itemId) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  const itemEl = document.querySelector(`#items-container [data-id="${itemId}"]`);
+  if (!itemEl) return;
+  const box = itemEl.querySelector('.oi-viz-box');
+  if (!box) return;
+  const inputEl = box.querySelector('input[type="file"]');
+  const file = item.viz;
+  const wasActive = box.classList.contains('viz-active');
+  box.className = 'file-box oi-viz-box' + (file ? ' has-files' : '') + (wasActive ? ' viz-active' : '');
+  box.innerHTML = file
+    ? `${getVizThumbHtml(file, item.id)}<div class="overlay-label">Візуалізація</div>`
+    : `<div class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div><div class="text">Візуалізація<br>товару</div>`;
+  box.appendChild(inputEl);
+}
+
+function getVizThumbHtml(file, itemId) {
+  const removeBtn = `<button class="thumb-remove" onclick="event.stopPropagation();removeItemViz(${itemId})" type="button">✕</button>`;
+  if (file.type && file.type.startsWith('image/')) {
+    const src = thumbCache.get(file) || '';
+    return `<div class="thumbs-grid n1"><div class="thumb-item">${removeBtn}${src ? `<img src="${src}" alt="">` : `<span class="ext-label">...</span>`}</div></div>`;
+  }
+  const ext = file.name?.split('.').pop()?.toUpperCase() || '?';
+  return `<div class="thumbs-grid n1"><div class="thumb-item">${removeBtn}<span class="ext-label">.${ext}</span></div></div>`;
+}
+
+function removeItemViz(itemId) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  item.viz = null;
+  renderItemVizBox(itemId);
+}
+
+// Куди піде наступний Ctrl+V. Клік по боксу візуалки робить позицію активною.
+function setActiveVizItem(itemId) {
+  activeVizItemId = itemId;
+  syncActiveVizHighlight();
+}
+
+function syncActiveVizHighlight() {
+  if (activeVizItemId != null && !items.some(i => i.id === activeVizItemId)) activeVizItemId = null;
+  document.querySelectorAll('#items-container .oi-viz-box').forEach(box => {
+    const id = Number(box.closest('[data-id]')?.dataset.id);
+    box.classList.toggle('viz-active', id === activeVizItemId);
+  });
+}
+
+// Ставить візуалку на позицію. Якщо там уже була — замінює, але помітно:
+// мовчазна заміна = тихо втрачений файл.
+async function setItemViz(itemId, file) {
+  const item = items.find(i => i.id === itemId);
+  if (!item) return;
+  const replaced = !!item.viz;
+  const thumb = await makeThumb(file);
+  if (thumb) thumbCache.set(file, thumb);
+  item.viz = file;
+  renderItemVizBox(itemId);
+  if (replaced) {
+    const box = document.querySelector(`#items-container [data-id="${itemId}"] .oi-viz-box`);
+    if (box) {
+      box.classList.remove('viz-swapped');
+      void box.offsetWidth;  // перезапуск анімації
+      box.classList.add('viz-swapped');
+      setTimeout(() => box.classList.remove('viz-swapped'), 800);
+    }
+  }
+}
+
+async function addItemViz(itemId, input) {
+  const file = input.files && input.files[0];
+  input.value = '';
+  if (!file) return;
+  setActiveVizItem(itemId);
+  await setItemViz(itemId, file);
+}
+
+// ── Paste from clipboard → візуалка активної позиції ──
 document.addEventListener('paste', async (e) => {
   const files = [...(e.clipboardData?.files || [])];
-  if (!files.length) return;
+  if (!files.length || !items.length) return;
   e.preventDefault();
-  await Promise.all(files.map(async file => {
-    const thumb = await makeThumb(file);
-    if (thumb) thumbCache.set(file, thumb);
-    globalVizFiles.push(file);
-  }));
-  renderGlobalFileBox('viz');
+  // Активна картка; якщо її нема — перша позиція без візуалки; інакше остання.
+  let target = items.find(i => i.id === activeVizItemId)
+    || items.find(i => !i.viz)
+    || items[items.length - 1];
+  for (const file of files) {
+    await setItemViz(target.id, file);
+    // Кілька файлів за раз розкладаємо по наступних порожніх позиціях.
+    const next = items.find(i => !i.viz);
+    if (!next) break;
+    target = next;
+  }
+  setActiveVizItem(target.id);
 });
 
 function tgConfirm(msg) {
@@ -3047,16 +3173,22 @@ async function validate() {
 
   // Файли: для Armor — обов'язкові (виз + друк); для Warrior — усі опціональні
   if (currentForm === 'armor') {
-    // Глобальні візуалки (у KeyCRM)
-    if (!globalVizFiles.length || globalVizFiles.some(f => !f.size)) errors.push('Додайте візуалізацію');
+    // Візуалка — по одній на КОЖНУ позицію (індекс позиції їде в KeyCRM)
+    const noViz = items.map((it, i) => (it.viz ? null : i + 1)).filter(Boolean);
+    if (noViz.length) {
+      errors.push(noViz.length === items.length
+        ? 'Додайте візуалізацію до кожного товару'
+        : `Немає візуалізації для позиції ${noViz.join(', ')}`);
+    }
     // Per-item файли для друку (обов'язкові — хоча б 1 на замовлення)
     const totalFiles = items.reduce((s, i) => s + (i.files?.length || 0), 0);
     if (totalFiles === 0) errors.push('Додайте файли для друку хоча б до одного товару');
     if (items.some(i => (i.files || []).some(f => !f.size))) errors.push('Один із файлів порожній');
   } else {
     // Warrior: жоден файл не обов'язковий, але прикріплений не має бути порожнім
-    if (globalVizFiles.some(f => !f.size) || globalPrintFiles.some(f => !f.size)) errors.push('Один із файлів порожній');
+    if (globalPrintFiles.some(f => !f.size)) errors.push('Один із файлів порожній');
   }
+  if (items.some(i => i.viz && !i.viz.size)) errors.push('Один із файлів порожній');
   // Розмір друку — обов'язковий у веб-версії для обох форм (потрібен для розрахунку ціни)
   if (!isTg) {
     const bad = items.some(i => i.mode === 'custom'
@@ -3087,11 +3219,7 @@ async function validate() {
       if (!ok) return false;
     }
   }
-  // Warning: візуалізацій більше, ніж товарів
-  if (globalVizFiles.length > items.length) {
-    const ok = await tgConfirm(`У замовленні ${globalVizFiles.length} візуалізації, а товар ${items.length}. Перевірте чи правильно прикріплені файли. Створити замовлення?`);
-    if (!ok) return false;
-  }
+  // Розбіжність «візуалок і товарів» більше неможлива: 1 позиція = 1 візуалка за побудовою.
   return true;
 }
 
@@ -3162,8 +3290,14 @@ function getFormData() {
   formData.append('urgent', document.getElementById('urgentCheck').checked ? 'true' : 'false');
   formData.append('order_route', items.some(i => i.mode === 'custom') ? 'designer' : 'standard');
   formData.append('tg_user_id', tg.initDataUnsafe?.user?.id || '7044843745');
-  // Visualisations (в KeyCRM як attachments) — глобальні для обох режимів
-  globalVizFiles.forEach((f, i) => formData.append(`item_viz_${i}`, f));
+  // Visualisations (в KeyCRM як attachments) — по одній на позицію.
+  // Ключ item_viz_<N> та префікс t{N}__ несуть індекс позиції: за ним n8n
+  // перейменовує вкладення на VIZ{N}, і візуалка стає навпроти свого товару.
+  items.forEach((item, itemIdx) => {
+    if (!item.viz) return;
+    const renamed = new File([item.viz], `t${itemIdx + 1}__${item.viz.name}`, { type: item.viz.type });
+    formData.append(`item_viz_${itemIdx}`, renamed);
+  });
 
   if (isWarrior) {
     // Warrior: global print files як раніше
@@ -3316,9 +3450,8 @@ function resetForm() {
   setTimeout(() => {
     shutter.classList.remove('active', 'closing');
     items = [];
-    globalVizFiles = [];
     globalPrintFiles = [];
-    renderGlobalFileBox('viz');
+    activeVizItemId = null;
     renderGlobalFileBox('print');
     addItem();
     document.getElementById('recipientName').value = '';
@@ -3394,10 +3527,9 @@ function switchForm(name) {
   applyTheme(name);
   // Скидаємо всі поля при переключенні бренду
   items = [];
-  globalVizFiles = [];
   globalPrintFiles = [];
+  activeVizItemId = null;
   addItem();
-  renderGlobalFileBox('viz');
   renderGlobalFileBox('print');
   document.getElementById('recipientName').value = '';
   if (typeof phoneInput !== 'undefined' && phoneInput) phoneInput.value = '+38 ';
@@ -3441,12 +3573,9 @@ function closeWarriorLockAndReset() {
   document.getElementById('animLock').classList.remove('active', 'complete');
   clearWarriorAnimTimers();
   items = [];
-  globalVizFiles = [];
   globalPrintFiles = [];
-  if (typeof renderGlobalFileBox === 'function') {
-    renderGlobalFileBox('viz');
-    renderGlobalFileBox('print');
-  }
+  activeVizItemId = null;
+  if (typeof renderGlobalFileBox === 'function') renderGlobalFileBox('print');
   addItem();
   document.getElementById('recipientName').value = '';
   if (typeof phoneInput !== 'undefined') phoneInput.value = '+38 ';
