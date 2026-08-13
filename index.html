@@ -349,6 +349,18 @@
       text-transform: uppercase;
       letter-spacing: 1px;
     }
+    /* Замкнена, доки якась позиція без візуалізації */
+    .add-item-btn.blocked {
+      cursor: not-allowed;
+      opacity: .55;
+      color: var(--text-dim);
+      border-style: dotted;
+      font-size: 11px;
+    }
+    .add-item-btn.blocked:hover {
+      border-color: var(--metal-edge);
+      box-shadow: none;
+    }
 
     .section-title {
       font-family: 'Russo One', sans-serif;
@@ -2705,7 +2717,38 @@ async function addGlobalFiles(field, input) {
   renderGlobalFileBox(field);
 }
 
+// Позиції без візуалізації, у порядку появи.
+function itemsMissingViz() {
+  return items.filter((i) => !i.viz);
+}
+
+// Кнопка «додати позицію» замкнена, доки є позиція без візуалізації, і сама
+// каже, якої саме бракує.
+function updateAddItemBtn() {
+  const btn = document.querySelector('.add-item-btn');
+  if (!btn) return;
+  const missing = itemsMissingViz();
+  btn.disabled = missing.length > 0;
+  btn.classList.toggle('blocked', missing.length > 0);
+  btn.textContent = missing.length
+    ? '+ ДОДАЙТЕ ВІЗУАЛІЗАЦІЮ ДО ПОЗИЦІЇ ' + (items.indexOf(missing[0]) + 1)
+    : '+ ДОДАТИ ПОЗИЦІЮ';
+}
+
 function addItem() {
+  // Нову позицію не заводимо, поки попередні без візуалізації: інакше
+  // дизайнер набирає товари, а прив'язку скріншотів відкладає на потім —
+  // саме так і зникає зв'язок візуалки з позицією.
+  const missing = itemsMissingViz();
+  if (missing.length) {
+    const n = items.indexOf(missing[0]) + 1;
+    const msg = 'Спочатку додайте візуалізацію до позиції ' + n + '.';
+    if (isTg) tg.showAlert(msg); else alert(msg);
+    setActiveVizItem(missing[0].id);
+    const box = document.querySelector('#items-container [data-id="' + missing[0].id + '"] .oi-viz-box');
+    if (box) box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    return;
+  }
   const id = ++itemIdSeq;
   items.push({
     id, type: '', color: '', size: '', qty: 1,
@@ -2862,6 +2905,7 @@ function renderItems() {
   }).join('');
   items.forEach(i => { renderItemFileBox(i.id); renderItemVizBox(i.id); });
   syncActiveVizHighlight();
+  updateAddItemBtn();
 }
 
 function updateItem(id, field, value) {
@@ -3084,6 +3128,7 @@ function removeItemViz(itemId) {
   if (!item) return;
   item.viz = null;
   renderItemVizBox(itemId);
+  updateAddItemBtn();
 }
 
 // Куди піде наступний Ctrl+V. Клік по боксу візуалки робить позицію активною.
@@ -3110,6 +3155,7 @@ async function setItemViz(itemId, file) {
   if (thumb) thumbCache.set(file, thumb);
   item.viz = file;
   renderItemVizBox(itemId);
+  updateAddItemBtn();
   if (replaced) {
     const box = document.querySelector(`#items-container [data-id="${itemId}"] .oi-viz-box`);
     if (box) {
