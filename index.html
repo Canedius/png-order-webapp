@@ -2718,7 +2718,10 @@ async function addGlobalFiles(field, input) {
 }
 
 // Позиції без візуалізації, у порядку появи.
+// Лише для Modern Armor: у Special Warrior візуалка необов'язкова, тож там
+// нічого не блокуємо.
 function itemsMissingViz() {
+  if (currentForm !== 'armor') return [];
   return items.filter((i) => !i.viz);
 }
 
@@ -2736,9 +2739,9 @@ function updateAddItemBtn() {
 }
 
 function addItem() {
-  // Нову позицію не заводимо, поки попередні без візуалізації: інакше
-  // дизайнер набирає товари, а прив'язку скріншотів відкладає на потім —
-  // саме так і зникає зв'язок візуалки з позицією.
+  // Modern Armor: нову позицію не заводимо, поки попередні без візуалізації —
+  // інакше дизайнер набирає товари, а прив'язку скріншотів відкладає на потім,
+  // і саме так зв'язок візуалки з позицією й зникає.
   const missing = itemsMissingViz();
   if (missing.length) {
     const n = items.indexOf(missing[0]) + 1;
