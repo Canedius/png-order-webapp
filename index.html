@@ -363,6 +363,14 @@
       border-left-color: var(--danger);
       background: rgba(180, 60, 50, 0.12);
     }
+    /* Як позиція розкладеться на окремі товари в замовленні */
+    .split-note {
+      margin-top: 5px;
+      padding-top: 5px;
+      border-top: 1px dashed rgba(196, 145, 62, 0.35);
+      color: var(--accent);
+      font-weight: 600;
+    }
     /* Замкнена, доки якась позиція без візуалізації */
     .add-item-btn.blocked {
       cursor: not-allowed;
@@ -2833,7 +2841,8 @@ function renderItems() {
                   : (item.viz || []).length < item.qty
                     ? `Якщо вироби різні (різні позивні) — додайте візуалізацію на кожен.
                        Якщо однакові, вистачить однієї.`
-                    : 'По одній на кожен виріб.'}</div>
+                    : 'По одній на кожен виріб.'}
+                ${splitNote(item)}</div>
             ` : ''}
 
             <label>Коментар до товару</label>
@@ -3358,6 +3367,57 @@ async function validate() {
   return true;
 }
 
+// Показує, як позиція розкладеться на окремі товари в замовленні. Менеджер
+// мусить бачити це ДО відправки: якщо візуалок менше, ніж виробів, залишок
+// мовчки припишеться останній, і це має бути свідомим вибором, а не сюрпризом
+// на друкованому аркуші.
+function splitNote(item) {
+  const viz = (item.viz || []).length;
+  const qty = Math.max(1, parseInt(item.qty) || 1);
+  if (item.mode === 'custom' || viz <= 1 || viz > qty) return '';
+  const n = Math.min(viz, qty);
+  const parts = [];
+  for (let k = 0; k < n; k++) parts.push('×' + (k === n - 1 ? qty - (n - 1) : 1));
+  return `<div class="split-note">Поїде як ${n} окремі товари: ${parts.join(' · ')}</div>`;
+}
+
+// Позиція з кількома візуалками — це насправді кілька різних виробів, тож у
+// KeyCRM вона їде кількома позиціями, а не однією з кількістю. Інакше замовлення
+// каже «футболка M ×3», і далі ніхто вже не знає, який принт на якій футболці.
+//
+// Розбиваємо ЛИШЕ коли візуалок більше однієї: три однакові футболки з одним
+// принтом лишаються однією позицією ×3 — це один товар, склад відбирає його за
+// раз. Кастом не розбиваємо: він іде до дизайнера, VBA його не малює.
+function expandItems(list) {
+  const out = [];
+  list.forEach((item) => {
+    const viz = item.viz || [];
+    const files = item.files || [];
+    const qty = Math.max(1, parseInt(item.qty) || 1);
+    if (viz.length <= 1 || item.mode === 'custom') {
+      out.push(Object.assign({}, item, { viz, files }));
+      return;
+    }
+    const n = Math.min(viz.length, qty);
+    for (let k = 0; k < n; k++) {
+      // Кількість: по виробу на візуалку, а залишок (візуалок менше, ніж
+      // виробів) дістається останній — решта виробів вважаються однаковими.
+      // Те саме правило, що показує підказка під візуалками.
+      const unitQty = k === n - 1 ? qty - (n - 1) : 1;
+      // Файли друку: один файл копіюється в КОЖНУ нову позицію (Prep Print
+      // Files множив його на кількість, а тепер кількість дорівнює одиниці);
+      // кілька файлів роздаються по одному, надлишок іде останній позиції.
+      // В обох випадках на Drive потрапляє стільки ж файлів, скільки й раніше.
+      let unitFiles;
+      if (files.length <= 1) unitFiles = files.slice();
+      else if (k === n - 1) unitFiles = files.slice(k);
+      else unitFiles = files[k] ? [files[k]] : [];
+      out.push(Object.assign({}, item, { qty: unitQty, viz: [viz[k]], files: unitFiles }));
+    }
+  });
+  return out;
+}
+
 function getFormData() {
   const formData = new FormData();
   const fullName = document.getElementById('recipientName').value.trim();
@@ -3375,6 +3435,11 @@ function getFormData() {
   const urgentSurchargePerUnit = sendPrice && isUrgent ? 100 : 0;
   const comboActive = sendPrice && buildPrintsList(items).length >= 2;
   const comboFactor = comboActive ? (1 - PRINT_COMBO_DISCOUNT) : 1;
+  // Далі все — products, OR_1086, ключі item_viz_ та item_print_ — будується з
+  // ОДНОГО розгорнутого списку, тож індекси в них лишаються синхронними.
+  // Ціна рахується вище, на вихідних items: розгортання не змінює ні кількості
+  // виробів, ні складу принтів, тож і комбо-знижку зсунути не може.
+  const units = expandItems(items);
   const orderData = {
     source_id: isWarrior ? 43 : 31,
     manager_id: 37,
@@ -3394,7 +3459,7 @@ function getFormData() {
       warehouse_ref: selectedWarehouse ? selectedWarehouse.ref : '',
       ...(shippingDate ? { shipping_date: shippingDate, shipping_date_actual: shippingDate } : {})
     },
-    products: items.map(i => {
+    products: units.map(i => {
       return {
         sku: buildSku(i.type, i.color, i.size),
         quantity: i.qty,
@@ -3406,7 +3471,7 @@ function getFormData() {
     }),
     custom_fields: [
       { uuid: 'OR_1010', value: 'DTF' },
-      { uuid: 'OR_1086', value: JSON.stringify(items.map(i => ({
+      { uuid: 'OR_1086', value: JSON.stringify(units.map(i => ({
         тип: i.mode === 'custom' ? 'кастом' : 'стандарт',
         логотип: i.mode !== 'custom' && !!i.hasLogo,
         позивний: i.mode !== 'custom' && !!i.hasCallsign,
@@ -3425,10 +3490,10 @@ function getFormData() {
   formData.append('urgent', document.getElementById('urgentCheck').checked ? 'true' : 'false');
   formData.append('order_route', items.some(i => i.mode === 'custom') ? 'designer' : 'standard');
   formData.append('tg_user_id', tg.initDataUnsafe?.user?.id || '7044843745');
-  // Visualisations (в KeyCRM як attachments) — до однієї на кожен виріб позиції.
-  // Ключ item_viz_<N>_<k> та префікс t{N}__ несуть індекс позиції: за ним n8n
-  // перейменовує вкладення на VIZ{N}_{k}, і візуалка стає навпроти свого товару.
-  items.forEach((item, itemIdx) => {
+  // Visualisations (в KeyCRM як attachments). Після розгортання на позицію
+  // припадає рівно одна візуалка, тож ключ item_viz_<N>_0 і префікс t{N}__
+  // дають n8n просте VIZ{N} — візуалка стає навпроти свого товару 1:1.
+  units.forEach((item, itemIdx) => {
     (item.viz || []).forEach((f, k) => {
       const renamed = new File([f], `t${itemIdx + 1}__${f.name}`, { type: f.type });
       formData.append(`item_viz_${itemIdx}_${k}`, renamed);
@@ -3440,7 +3505,7 @@ function getFormData() {
     globalPrintFiles.forEach((f, i) => formData.append(`item_print_${i}`, f));
   } else {
     // Armor: per-item файли для друку — у Drive з префіксом t{N}__ (для VBA mapping)
-    items.forEach((item, itemIdx) => {
+    units.forEach((item, itemIdx) => {
       (item.files || []).forEach((f, fileIdx) => {
         const prefixedName = `t${itemIdx + 1}__${f.name}`;
         const renamed = new File([f], prefixedName, { type: f.type });
