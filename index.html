@@ -3127,7 +3127,7 @@ async function addItemFiles(itemId, input) {
   renderItemFileBox(itemId);
 }
 
-// ── Візуалізація: рівно одна на позицію ──────────────────────────────────
+// ── Візуалізація: по одній на виріб (Warrior — без обмеження) ────────────
 // Індекс позиції потім їде в KeyCRM у назві вкладення (t{N}__), і саме за ним
 // візуалка стає навпроти свого товару на «Візуалі на виробництво».
 
@@ -3143,7 +3143,10 @@ function renderItemVizBox(itemId) {
   const wasActive = box.classList.contains('viz-active');
   box.className = 'file-box oi-viz-box' + (files.length ? ' has-files' : '') + (wasActive ? ' viz-active' : '');
   const cap = vizCap(item);
-  const label = files.length > 1 || cap > 1 ? `Візуалізації ${files.length}/${cap}` : 'Візуалізація';
+  // Без стелі (Warrior) показуємо просто лічильник — «N/∞» нічого не пояснює.
+  const label = !isFinite(cap)
+    ? (files.length > 1 ? `Візуалізації ${files.length}` : 'Візуалізація')
+    : (files.length > 1 || cap > 1 ? `Візуалізації ${files.length}/${cap}` : 'Візуалізація');
   box.innerHTML = files.length
     ? `${getVizThumbsHtml(files, item.id)}<div class="overlay-label">${label}</div>`
     : `<div class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div><div class="text">Візуалізація<br>товару</div>`;
@@ -3151,7 +3154,10 @@ function renderItemVizBox(itemId) {
 }
 
 // Скільки візуалок приймає позиція: по одній на виріб.
+// Special Warrior — виняток: там візуалка це референс від клієнта, їх на один
+// виріб може бути скільки завгодно, тож стелі немає.
 function vizCap(item) {
+  if (currentForm !== 'armor') return Infinity;
   return Math.max(1, Number(item && item.qty) || 1);
 }
 
@@ -3258,6 +3264,9 @@ document.addEventListener('paste', async (e) => {
   let rejected = 0;
   for (const file of files) {
     rejected = await setItemViz(target.id, file);
+    // Поки в поточну позицію ще влазить — усі файли вставки лишаються в ній
+    // (у Warrior стелі немає, тож уся пачка йде в обрану картку).
+    if ((target.viz || []).length < vizCap(target)) continue;
     // Заповнили позицію — переходимо до наступної, куди ще влізе.
     const next = firstItemWithFreeViz();
     if (!next) break;
@@ -3374,8 +3383,8 @@ async function validate() {
 function splitNote(item) {
   const viz = (item.viz || []).length;
   const qty = Math.max(1, parseInt(item.qty) || 1);
-  if (item.mode === 'custom' || viz <= 1 || viz > qty) return '';
   const n = Math.min(viz, qty);
+  if (item.mode === 'custom' || viz <= 1 || n <= 1) return '';
   const parts = [];
   for (let k = 0; k < n; k++) parts.push('×' + (k === n - 1 ? qty - (n - 1) : 1));
   return `<div class="split-note">Поїде як ${n} окремі товари: ${parts.join(' · ')}</div>`;
@@ -3412,7 +3421,10 @@ function expandItems(list) {
       if (files.length <= 1) unitFiles = files.slice();
       else if (k === n - 1) unitFiles = files.slice(k);
       else unitFiles = files[k] ? [files[k]] : [];
-      out.push(Object.assign({}, item, { qty: unitQty, viz: [viz[k]], files: unitFiles }));
+      // Візуалок може бути більше, ніж виробів (Warrior — стелі немає): залишок
+      // дістається останньому товару, щоб жоден файл не зник мовчки.
+      const unitViz = k === n - 1 ? viz.slice(k) : [viz[k]];
+      out.push(Object.assign({}, item, { qty: unitQty, viz: unitViz, files: unitFiles }));
     }
   });
   return out;
