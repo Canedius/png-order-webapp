@@ -2955,6 +2955,8 @@ function updateItem(id, field, value) {
   if (field === 'type') {
     const colors = COLORS_BY_TYPE[value] || [];
     if (!colors.includes(item.color)) item.color = '';
+    // єдиний доступний колір обираємо одразу
+    if (colors.length === 1) item.color = colors[0];
     const sizes = getSizes(value, item.color);
     if (!sizes.includes(item.size)) item.size = '';
     item.type = value;
